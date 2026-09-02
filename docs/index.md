@@ -44,5 +44,4 @@ By directly targeting single-occupancy trips — the single biggest driver of bo
 Unlike general ride-hailing apps, which are optimized for on-demand convenience rather than emissions reduction, BarengIn is built around recurring, predictable campus commutes and makes the environmental impact of each ride visible to the user. Unlike informal Facebook or WhatsApp carpool groups, it automates matching, verifies riders, and quantifies the carbon avoided — turning an ad-hoc favor into a measurable climate action.
 
 ## About the Project
-
 BarengIn is a schedule-based carpooling and ride-sharing platform built specifically for university students in Indonesia, designed to cut down on single-occupancy vehicle trips and their carbon footprint. By matching students' class schedules and destination faculties, the app connects Drivers with Passengers in a safer, more structured way than conventional options — while layering in social profiles and emissions tracking so that reducing your carbon footprint also means making daily commuting more social and more affordable.
