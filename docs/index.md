@@ -1,6 +1,6 @@
 # BarengIn
 
-**Senior Project TI**
+**Junior Project — Object-Based Programming and Databases**
 Department of Electrical Engineering and Information Technology, Faculty of Engineering, Universitas Gadjah Mada
 
 ## Group 5
@@ -10,7 +10,7 @@ Department of Electrical Engineering and Information Technology, Faculty of Engi
 - Member 3: Calvin
 
 ## Product Name & Type
-BarengIn — schedule-based carpooling and social ride-sharing mobile/desktop application
+BarengIn — Platform (web vs. mobile — decision pending); a schedule-based carpooling and social ride-sharing application
 
 ## Background
 Private vehicles dominate campus commuting in Indonesia, and most of them carry just one person. Every solo trip to campus adds to traffic congestion at campus gates and to the carbon footprint of the university community — even though many of these trips overlap almost exactly in timing and destination. BarengIn exists to turn that overlap into shared rides: matching students by class schedule and destination faculty so that private vehicles are used more efficiently, fewer cars are needed on the road each day, and the emissions from daily commuting go down.
