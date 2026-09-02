@@ -27,6 +27,23 @@ The platform was created to address three interconnected problems on Indonesian 
 ## Climate Action Alignment
 BarengIn reduces vehicle trips per capita by consolidating single occupancy commutes into shared rides, and gives campus administrators visibility into estimated emissions reduced through the admin dashboard.
 
+## Team
+
+BarengIn
+
+- Member 1: Altaf Parves Shua Ilham – 24/536741/TK/59565
+- Member 2: Calvin - 24/532894/TK/59025
+- Member 3: M Dimas Dwi Ananda – 24/536904/TK/59594
+- Member 4: Diffie Alfierie Iswanto – 24/533049/TK/59056
+
+| Role | Name | NIU |
+|---|---|---|
+| Software Architect | Altaf Parves Shua Ilham | 24/536741/TK/59565 |
+| Backend Engineer | Calvin | 24/532894/TK/59025 |
+| Frontend Engineer | M Dimas Dwi Ananda | 24/536904/TK/59594 |
+| Frontend Engineer | Diffie Alfierie Iswanto | 24/533049/TK/59056 |
+
+
 ## Tech Stack
 | Layer | Technology |
 |---|---|
