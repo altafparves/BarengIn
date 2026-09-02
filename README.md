@@ -32,9 +32,9 @@ BarengIn reduces vehicle trips per capita by consolidating single occupancy comm
 BarengIn
 
 - Member 1: Altaf Parves Shua Ilham – 24/536741/TK/59565
-- Member 2: Calvin - 24/532894/TK/59025
-- Member 3: M Dimas Dwi Ananda – 24/536904/TK/59594
-- Member 4: Diffie Alfierie Iswanto – 24/533049/TK/59056
+- Member 2: Calvin
+- Member 3: M Dimas Dwi Ananda
+- Member 4: Diffie Alfierie Iswanto
 
 | Role | Name | NIU |
 |---|---|---|
