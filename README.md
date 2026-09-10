@@ -58,3 +58,236 @@ Gojek/GoCar, Grab, and BlaBlaCar are the closest comparisons. BarengIn different
 
 ## Project Status
 In development. Module 1 (concept, repo setup, GitHub Page) is in progress, with architecture and API design next.
+
+## Module 3 — Class Design
+
+```mermaid
+classDiagram
+    namespace Enumerations {
+        class VerificationStatus {
+            <<enumeration>>
+            Unverified
+            Pending
+            Verified
+            Rejected
+        }
+        class TripStatus {
+            <<enumeration>>
+            Draft
+            Published
+            Full
+            InProgress
+            Completed
+            Cancelled
+        }
+        class RequestStatus {
+            <<enumeration>>
+            Pending
+            Approved
+            Rejected
+            Cancelled
+        }
+        class VehicleType {
+            <<enumeration>>
+            Motorcycle
+            Car
+        }
+    }
+
+    namespace ValueObjects {
+        class GeoPoint {
+            <<value object>>
+            -latitude : double
+            -longitude : double
+            +GeoPoint(lat : double, lng : double)
+            +DistanceTo(other : GeoPoint) double
+            +IsWithinRadius(other : GeoPoint, km : double) bool
+            +ToString() string
+        }
+        class Money {
+            <<value object>>
+            -amount : decimal
+            -currency : string
+            +Money(amount : decimal, currency : string)
+            +Add(other : Money) Money
+            +Split(parts : int) Money
+            +ToString() string
+        }
+    }
+
+    class User {
+        <<abstract>>
+        #userId : Guid
+        #niu : string
+        #fullName : string
+        #email : string
+        #passwordHash : string
+        #phoneNumber : string
+        #ktmImageUrl : string
+        #verificationStatus : VerificationStatus
+        #facultyId : Guid
+        #hobbies : string
+        #bio : string
+        #createdAt : DateTime
+        +Login(email : string, password : string) bool
+        +Logout() void
+        +UpdateProfile(name : string, phone : string, bio : string) bool
+        +UploadKtm(imageUrl : string) bool
+        +IsVerified() bool
+        +CanPublishTrip()* bool
+        +GetRoleName()* string
+    }
+
+    class Passenger {
+        -homeAddress : string
+        -homeLocation : GeoPoint
+        -currentLocation : GeoPoint
+        +CanPublishTrip() bool
+        +GetRoleName() string
+        +UpdateCurrentLocation(point : GeoPoint) void
+        +SearchTrips(date : DateTime, facultyId : Guid) List~Trip~
+        +RequestRide(tripId : Guid, pickup : GeoPoint) RideRequest
+        +CancelRequest(requestId : Guid) bool
+        +GetTripHistory() List~Trip~
+    }
+
+    class Driver {
+        -licenseNumber : string
+        -rating : double
+        -totalTripsCompleted : int
+        +CanPublishTrip() bool
+        +GetRoleName() string
+        +AddVehicle(vehicle : Vehicle) bool
+        +PublishTrip(vehicleId : Guid, departure : DateTime, seats : int) Trip
+        +ViewIncomingRequests(tripId : Guid) List~RideRequest~
+        +ApproveRequest(requestId : Guid) bool
+        +RejectRequest(requestId : Guid, reason : string) bool
+        +CompleteTrip(tripId : Guid) bool
+    }
+
+    class Admin {
+        -department : string
+        -adminLevel : int
+        +CanPublishTrip() bool
+        +GetRoleName() string
+        +VerifyKtm(userId : Guid, status : VerificationStatus) bool
+        +SuspendUser(userId : Guid, reason : string) bool
+        +ViewEmissionDashboard(from : DateTime, to : DateTime) double
+        +GenerateReport(from : DateTime, to : DateTime) string
+    }
+
+    class Vehicle {
+        -vehicleId : Guid
+        -driverId : Guid
+        -plateNumber : string
+        -brand : string
+        -model : string
+        -color : string
+        -type : VehicleType
+        -seatCapacity : int
+        +GetSeatCapacity() int
+        +UpdateDetails(brand : string, model : string, color : string) bool
+        +GetEmissionFactor() EmissionFactor
+    }
+
+    class Trip {
+        -tripId : Guid
+        -driverId : Guid
+        -vehicleId : Guid
+        -originAddress : string
+        -originLocation : GeoPoint
+        -destinationFacultyId : Guid
+        -departureTime : DateTime
+        -availableSeats : int
+        -costPerSeat : Money
+        -distanceKm : double
+        -polylineJson : string
+        -status : TripStatus
+        -createdAt : DateTime
+        +HasAvailableSeat() bool
+        +AddPassenger(passengerId : Guid) bool
+        +RemovePassenger(passengerId : Guid) bool
+        +CalculateCostPerSeat(fuelPrice : decimal) Money
+        +CalculateCo2Saved() double
+        +Start() bool
+        +Complete() bool
+        +Cancel(reason : string) bool
+        +IsMatchingSchedule(schedule : ClassSchedule) bool
+    }
+
+    class RideRequest {
+        -requestId : Guid
+        -tripId : Guid
+        -passengerId : Guid
+        -pickupAddress : string
+        -pickupPoint : GeoPoint
+        -message : string
+        -status : RequestStatus
+        -requestedAt : DateTime
+        -respondedAt : DateTime
+        +Approve() bool
+        +Reject(reason : string) bool
+        +Cancel() bool
+        +IsPending() bool
+        +GetDetourDistance(trip : Trip) double
+    }
+
+    class ClassSchedule {
+        -scheduleId : Guid
+        -userId : Guid
+        -courseName : string
+        -facultyId : Guid
+        -dayOfWeek : DayOfWeek
+        -startTime : TimeSpan
+        -endTime : TimeSpan
+        +OverlapsWith(other : ClassSchedule) bool
+        +GetArrivalDeadline(date : DateTime) DateTime
+        +MatchesTrip(trip : Trip) bool
+    }
+
+    class Faculty {
+        -facultyId : Guid
+        -name : string
+        -shortName : string
+        -location : GeoPoint
+        +DistanceTo(point : GeoPoint) double
+        +GetFullName() string
+    }
+
+    class EmissionFactor {
+        -emissionFactorId : Guid
+        -vehicleType : VehicleType
+        -gramsCo2PerKm : double
+        -source : string
+        +CalculateEmission(distanceKm : double) double
+        +CalculateSaving(distanceKm : double, occupants : int) double
+    }
+
+    User <|-- Passenger
+    Passenger <|-- Driver
+    User <|-- Admin
+
+    User "1" *-- "0..*" ClassSchedule : owns
+    User "0..*" --> "1" Faculty : belongs to
+
+    Driver "1" *-- "1..*" Vehicle : owns
+    Driver "1" o-- "0..*" Trip : publishes
+    Vehicle "1" --> "0..*" Trip : used in
+
+    Trip "1" o-- "0..*" RideRequest : receives
+    Passenger "1" o-- "0..*" RideRequest : submits
+    Trip "0..*" --> "1" Faculty : destination
+
+    Vehicle "0..*" --> "1" EmissionFactor : rated by
+
+    User ..> VerificationStatus
+    Trip ..> TripStatus
+    RideRequest ..> RequestStatus
+    Vehicle ..> VehicleType
+
+    User *-- GeoPoint
+    Trip *-- GeoPoint
+    RideRequest *-- GeoPoint
+    Faculty *-- GeoPoint
+    Trip *-- Money
+```
