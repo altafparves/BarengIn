@@ -1,68 +1,58 @@
 namespace BarengIn.Domain.ValueObjects;
 
 /// <summary>
-/// An immutable monetary amount. Defaults to Indonesian rupiah, which is the only
-/// currency the platform handles today; the field exists so that a second currency
-/// never becomes a schema change.
+/// An immutable monetary amount in a specific currency. Arithmetic never mutates
+/// the instance; it always returns a new <see cref="Money"/>.
 /// </summary>
-public sealed record Money
+public sealed class Money : IEquatable<Money>
 {
-    public const string DefaultCurrency = "IDR";
+    private readonly decimal amount;
+    private readonly string currency;
 
-    public Money(decimal amount, string currency = DefaultCurrency)
+    public Money(decimal amount, string currency)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(currency);
-
         if (amount < 0)
         {
-            throw new ArgumentOutOfRangeException(
-                nameof(amount), amount, "A monetary amount cannot be negative.");
+            throw new ArgumentOutOfRangeException(nameof(amount), amount, "Amount cannot be negative.");
         }
 
-        Amount = amount;
-        Currency = currency.ToUpperInvariant();
+        ArgumentException.ThrowIfNullOrWhiteSpace(currency);
+
+        this.amount = amount;
+        this.currency = currency;
     }
 
-    public decimal Amount { get; }
-
-    public string Currency { get; }
-
-    public static Money Zero(string currency = DefaultCurrency) => new(0m, currency);
-
-    public static Money operator +(Money left, Money right) => left.Add(right);
-
+    /// <summary>Returns a new instance holding the sum of both amounts. Currencies must match.</summary>
     public Money Add(Money other)
     {
         ArgumentNullException.ThrowIfNull(other);
-        EnsureSameCurrency(other);
 
-        return new Money(Amount + other.Amount, Currency);
+        if (!string.Equals(currency, other.currency, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"Cannot add {other.currency} to {currency}: currencies must match.");
+        }
+
+        return new Money(amount + other.amount, currency);
     }
 
-    /// <summary>
-    /// Splits the amount into <paramref name="parts"/> equal shares and returns one share,
-    /// rounded to two decimal places. Rounding means the shares may not sum exactly back to
-    /// the original amount; the driver absorbs the difference.
-    /// </summary>
-    public Money SplitEvenly(int parts)
+    /// <summary>Returns a new instance holding an equal share of this amount, split across <paramref name="parts"/>.</summary>
+    public Money Split(int parts)
     {
         if (parts <= 0)
         {
-            throw new ArgumentOutOfRangeException(
-                nameof(parts), parts, "A cost must be split into at least one part.");
+            throw new ArgumentOutOfRangeException(nameof(parts), parts, "Parts must be greater than zero.");
         }
 
-        return new Money(Math.Round(Amount / parts, 2, MidpointRounding.AwayFromZero), Currency);
+        return new Money(amount / parts, currency);
     }
 
-    public override string ToString() => FormattableString.Invariant($"{Amount:0.##} {Currency}");
+    public override string ToString() => $"{amount} {currency}";
 
-    private void EnsureSameCurrency(Money other)
-    {
-        if (!string.Equals(Currency, other.Currency, StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException(
-                $"Cannot combine amounts in {Currency} and {other.Currency}.");
-        }
-    }
+    public bool Equals(Money? other) =>
+        other is not null && amount == other.amount && string.Equals(currency, other.currency, StringComparison.Ordinal);
+
+    public override bool Equals(object? obj) => Equals(obj as Money);
+
+    public override int GetHashCode() => HashCode.Combine(amount, currency);
 }

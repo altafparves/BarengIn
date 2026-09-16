@@ -1,60 +1,59 @@
 namespace BarengIn.Domain.ValueObjects;
 
 /// <summary>
-/// An immutable WGS-84 coordinate. Compared by value, so two points with the same
-/// latitude and longitude are the same point.
+/// An immutable latitude/longitude coordinate. Two instances with the same
+/// coordinates are considered equal, as expected of a value object.
 /// </summary>
-public sealed record GeoPoint
+public sealed class GeoPoint : IEquatable<GeoPoint>
 {
     private const double EarthRadiusKm = 6371.0;
 
-    public GeoPoint(double latitude, double longitude)
+    private readonly double latitude;
+    private readonly double longitude;
+
+    public GeoPoint(double lat, double lng)
     {
-        if (double.IsNaN(latitude) || latitude is < -90 or > 90)
+        if (lat is < -90 or > 90)
         {
-            throw new ArgumentOutOfRangeException(
-                nameof(latitude), latitude, "Latitude must be between -90 and 90 degrees.");
+            throw new ArgumentOutOfRangeException(nameof(lat), lat, "Latitude must be between -90 and 90 degrees.");
         }
 
-        if (double.IsNaN(longitude) || longitude is < -180 or > 180)
+        if (lng is < -180 or > 180)
         {
-            throw new ArgumentOutOfRangeException(
-                nameof(longitude), longitude, "Longitude must be between -180 and 180 degrees.");
+            throw new ArgumentOutOfRangeException(nameof(lng), lng, "Longitude must be between -180 and 180 degrees.");
         }
 
-        Latitude = latitude;
-        Longitude = longitude;
+        latitude = lat;
+        longitude = lng;
     }
 
-    public double Latitude { get; }
-
-    public double Longitude { get; }
-
-    /// <summary>
-    /// Great-circle distance to <paramref name="other"/> in kilometres, using the haversine
-    /// formula. This is a straight-line estimate; road distance for a published trip comes
-    /// from the routing provider and is stored on the trip itself.
-    /// </summary>
-    public double DistanceKmTo(GeoPoint other)
+    /// <summary>Great-circle distance to another point, in kilometers (haversine formula).</summary>
+    public double DistanceTo(GeoPoint other)
     {
         ArgumentNullException.ThrowIfNull(other);
 
-        double deltaLatitude = ToRadians(other.Latitude - Latitude);
-        double deltaLongitude = ToRadians(other.Longitude - Longitude);
+        var lat1 = DegreesToRadians(latitude);
+        var lat2 = DegreesToRadians(other.latitude);
+        var deltaLat = DegreesToRadians(other.latitude - latitude);
+        var deltaLng = DegreesToRadians(other.longitude - longitude);
 
-        double a = (Math.Sin(deltaLatitude / 2) * Math.Sin(deltaLatitude / 2))
-            + (Math.Cos(ToRadians(Latitude))
-                * Math.Cos(ToRadians(other.Latitude))
-                * Math.Sin(deltaLongitude / 2)
-                * Math.Sin(deltaLongitude / 2));
-
-        double c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+        var a = Math.Sin(deltaLat / 2) * Math.Sin(deltaLat / 2)
+            + Math.Cos(lat1) * Math.Cos(lat2) * Math.Sin(deltaLng / 2) * Math.Sin(deltaLng / 2);
+        var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
 
         return EarthRadiusKm * c;
     }
 
-    public override string ToString() =>
-        FormattableString.Invariant($"({Latitude:F6}, {Longitude:F6})");
+    public bool IsWithinRadius(GeoPoint other, double km) => DistanceTo(other) <= km;
 
-    private static double ToRadians(double degrees) => degrees * Math.PI / 180.0;
+    public override string ToString() => $"({latitude}, {longitude})";
+
+    public bool Equals(GeoPoint? other) =>
+        other is not null && latitude.Equals(other.latitude) && longitude.Equals(other.longitude);
+
+    public override bool Equals(object? obj) => Equals(obj as GeoPoint);
+
+    public override int GetHashCode() => HashCode.Combine(latitude, longitude);
+
+    private static double DegreesToRadians(double degrees) => degrees * Math.PI / 180.0;
 }
