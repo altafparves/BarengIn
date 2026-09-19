@@ -427,3 +427,29 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+##########################################################################
+## BarengIn project rules
+## Everything above this line is the stock Visual Studio template.
+## node_modules/, **/[Bb]in/* and [Oo]bj/ are already covered above.
+##########################################################################
+
+# Local ASP.NET Core configuration. Holds the PostgreSQL connection string
+# and other developer-machine settings. Use `dotnet user-secrets` instead of
+# putting secrets here, and never commit these files.
+appsettings.Development.json
+appsettings.*.Development.json
+
+# Environment files.
+# The stock `*.env` pattern above matches `.env` but NOT `.env.local`,
+# `.env.production` and friends, so they are listed explicitly here.
+.env
+.env.*
+!.env.example
+
+# Locally regenerated seed data (e.g. ad-hoc OSM Overpass output).
+# Only the reviewed, committed seed files belong in git.
+seed/*.local.json
+
+# macOS
+.DS_Store

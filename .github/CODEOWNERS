@@ -1,0 +1,7 @@
+# Code owners for BarengIn.
+# Listed owners are requested for review automatically when files under
+# these paths change. The graded domain and application logic is owned by
+# the software architect.
+
+/src/BarengIn.Domain/       @altafparves
+/src/BarengIn.Application/  @altafparves

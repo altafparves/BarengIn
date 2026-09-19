@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>BarengIn.Domain</RootNamespace>
+    <AssemblyName>BarengIn.Domain</AssemblyName>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <!--
+    This project is deliberately dependency free. It has no project references and no
+    persistence packages: the domain must stay usable and testable without a database.
+    Persistence concerns belong in BarengIn.Infrastructure.
+  -->
+
+</Project>
