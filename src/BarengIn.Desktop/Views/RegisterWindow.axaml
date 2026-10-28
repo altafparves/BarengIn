@@ -1,0 +1,45 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="BarengIn.Desktop.Views.RegisterWindow"
+        Title="BarengIn - Create Account"
+        Width="400" Height="640"
+        CanResize="False"
+        WindowStartupLocation="CenterScreen"
+        Background="White">
+
+    <StackPanel Margin="24" Spacing="6">
+        <TextBlock Classes="heading" Text="Create your account" />
+        <TextBlock Classes="muted" Text="Every user is verified with their student ID card (KTM)."
+                   TextWrapping="Wrap" Margin="0,0,0,10" />
+
+        <TextBlock Text="Full name :" />
+        <TextBox x:Name="tbName" />
+
+        <TextBlock Text="Student ID (NIM) :" Margin="0,6,0,0" />
+        <TextBox x:Name="tbNim" />
+
+        <TextBlock Text="Faculty :" Margin="0,6,0,0" />
+        <ComboBox x:Name="cbFaculty" HorizontalAlignment="Stretch" SelectedIndex="0" />
+
+        <TextBlock Text="Password :" Margin="0,6,0,0" />
+        <TextBox x:Name="tbPassword" PasswordChar="•" />
+
+        <TextBlock Text="Confirm password :" Margin="0,6,0,0" />
+        <TextBox x:Name="tbConfirm" PasswordChar="•" />
+
+        <TextBlock Text="KTM photo :" Margin="0,6,0,0" />
+        <Grid ColumnDefinitions="Auto,12,*">
+            <Button x:Name="btnKtm" Grid.Column="0" Classes="secondary" Content="Choose file..."
+                    Click="btnKtm_Click" />
+            <TextBlock x:Name="lblKtm" Grid.Column="2" Classes="muted label" Text="No file selected"
+                       TextTrimming="CharacterEllipsis" />
+        </Grid>
+
+        <Grid ColumnDefinitions="*,12,*" Margin="0,18,0,0">
+            <Button x:Name="btnRegister" Grid.Column="0" Classes="primary" Content="Register"
+                    HorizontalAlignment="Stretch" Height="40" Click="btnRegister_Click" />
+            <Button x:Name="btnBack" Grid.Column="2" Classes="secondary" Content="Back"
+                    HorizontalAlignment="Stretch" Height="40" Click="btnBack_Click" />
+        </Grid>
+    </StackPanel>
+</Window>

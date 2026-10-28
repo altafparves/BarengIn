@@ -1,0 +1,101 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:m="using:BarengIn.Desktop.Models"
+        x:Class="BarengIn.Desktop.Views.DriverWindow"
+        Title="BarengIn - Driver"
+        Width="880" Height="560"
+        CanResize="False"
+        WindowStartupLocation="CenterScreen"
+        Background="White">
+
+    <Grid Margin="20" RowDefinitions="Auto,16,*,12,Auto">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+            <TextBlock x:Name="lblWelcome" Classes="heading" VerticalAlignment="Center" />
+            <Button x:Name="btnProfile" Grid.Column="1" Classes="secondary" Content="Profile"
+                    Width="90" Click="btnProfile_Click" />
+        </Grid>
+
+        <Grid Grid.Row="2" ColumnDefinitions="360,24,*">
+            <StackPanel Grid.Column="0" Spacing="8">
+                <TextBlock Classes="section" Text="Post a trip" />
+                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,8,Auto,8,Auto,8,Auto,8,Auto">
+                    <TextBlock Grid.Row="0" Classes="label" Text="Pickup area :" Margin="0,0,14,0" />
+                    <TextBox x:Name="tbOrigin" Grid.Row="0" Grid.Column="1" PlaceholderText="e.g. Jakal Km 5" />
+
+                    <TextBlock Grid.Row="2" Classes="label" Text="Destination :" Margin="0,0,14,0" />
+                    <ComboBox x:Name="cbFaculty" Grid.Row="2" Grid.Column="1" HorizontalAlignment="Stretch" />
+
+                    <TextBlock Grid.Row="4" Classes="label" Text="Departs :" Margin="0,0,14,0" />
+                    <TimePicker x:Name="dtpTime" Grid.Row="4" Grid.Column="1" ClockIdentifier="24HourClock"
+                                SelectedTime="07:30:00" HorizontalAlignment="Left" />
+
+                    <TextBlock Grid.Row="6" Classes="label" Text="Seats :" Margin="0,0,14,0" />
+                    <NumericUpDown x:Name="nudSeats" Grid.Row="6" Grid.Column="1" Minimum="1" Maximum="6"
+                                   Value="3" FormatString="0" HorizontalAlignment="Left" Width="140" />
+
+                    <TextBlock Grid.Row="8" Classes="label" Text="Cost / seat :" Margin="0,0,14,0" />
+                    <NumericUpDown x:Name="nudCost" Grid.Row="8" Grid.Column="1" Minimum="0" Maximum="100000"
+                                   Increment="1000" Value="5000" FormatString="N0" HorizontalAlignment="Left"
+                                   Width="140" />
+                </Grid>
+                <Button x:Name="btnPost" Classes="primary" Content="Post Trip" HorizontalAlignment="Stretch"
+                        Height="40" Margin="0,6,0,0" Click="btnPost_Click" />
+
+                <TextBlock Classes="section" Text="Your posted trips" Margin="0,14,0,4" />
+                <Border BorderBrush="#D0D0D0" BorderThickness="1" Height="130">
+                    <ListBox x:Name="lvTrips">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="m:TripRow">
+                                <Grid ColumnDefinitions="*,56,40,*">
+                                    <TextBlock Grid.Column="0" Text="{Binding Pickup}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Departs}" />
+                                    <TextBlock Grid.Column="2" Text="{Binding Seats}" />
+                                    <TextBlock Grid.Column="3" Text="{Binding Cost}" HorizontalAlignment="Right" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Border>
+            </StackPanel>
+
+            <Grid Grid.Column="2" RowDefinitions="Auto,*">
+                <TextBlock Classes="section" Text="Ride requests" />
+                <Border Grid.Row="1" BorderBrush="#D0D0D0" BorderThickness="1">
+                    <ListBox x:Name="lvRequests">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="m:RequestItem">
+                                <Grid ColumnDefinitions="*,Auto" Margin="0,4">
+                                    <StackPanel Grid.Column="0" Spacing="2">
+                                        <TextBlock Text="{Binding Passenger}" FontWeight="SemiBold" />
+                                        <TextBlock Classes="muted" FontSize="12">
+                                            <TextBlock.Text>
+                                                <MultiBinding StringFormat="{}{0}  ·  {1}">
+                                                    <Binding Path="Pickup" />
+                                                    <Binding Path="Faculty" />
+                                                </MultiBinding>
+                                            </TextBlock.Text>
+                                        </TextBlock>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"
+                                                VerticalAlignment="Center"
+                                                IsVisible="{Binding IsPending}">
+                                        <Button Classes="primary" Content="Approve" Width="84"
+                                                Click="btnApprove_Click" />
+                                        <Button Classes="secondary" Content="Reject" Width="84"
+                                                Click="btnReject_Click" />
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="1" Text="{Binding Status}" FontWeight="SemiBold"
+                                               VerticalAlignment="Center" Foreground="#555555"
+                                               IsVisible="{Binding !IsPending}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <Button x:Name="btnLogout" Grid.Row="4" Classes="secondary" Content="Logout" Width="100"
+                Height="40" HorizontalAlignment="Right" Click="btnLogout_Click" />
+    </Grid>
+</Window>

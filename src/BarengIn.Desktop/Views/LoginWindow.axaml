@@ -1,0 +1,37 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="BarengIn.Desktop.Views.LoginWindow"
+        Title="BarengIn - Login"
+        Width="360" Height="450"
+        CanResize="False"
+        WindowStartupLocation="CenterScreen"
+        Background="White">
+
+    <StackPanel Margin="24" Spacing="6">
+        <TextBlock Classes="title" Text="BarengIn" />
+        <TextBlock Classes="muted" Text="Carpool to campus, matched by your class schedule."
+                   TextWrapping="Wrap" Margin="0,0,0,14" />
+
+        <TextBlock Text="I am a :" />
+        <ComboBox x:Name="cbRole" HorizontalAlignment="Stretch" SelectedIndex="0">
+            <ComboBoxItem>Passenger</ComboBoxItem>
+            <ComboBoxItem>Driver</ComboBoxItem>
+        </ComboBox>
+
+        <TextBlock Text="Student ID (NIM) :" Margin="0,8,0,0" />
+        <TextBox x:Name="tbUsername" />
+
+        <TextBlock Text="Password :" Margin="0,8,0,0" />
+        <TextBox x:Name="tbPassword" PasswordChar="•" />
+
+        <Grid ColumnDefinitions="*,12,*" Margin="0,18,0,0">
+            <Button x:Name="btnLogin" Grid.Column="0" Classes="primary" Content="Login"
+                    HorizontalAlignment="Stretch" Height="40" Click="btnLogin_Click" />
+            <Button x:Name="btnClose" Grid.Column="2" Classes="secondary" Content="Close"
+                    HorizontalAlignment="Stretch" Height="40" Click="btnClose_Click" />
+        </Grid>
+
+        <Button x:Name="btnRegister" Classes="link" Content="No account yet? Create one"
+                HorizontalAlignment="Center" Margin="0,6,0,0" Click="btnRegister_Click" />
+    </StackPanel>
+</Window>
