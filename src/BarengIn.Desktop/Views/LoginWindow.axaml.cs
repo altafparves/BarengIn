@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using BarengIn.Desktop.Logic;
 using BarengIn.Desktop.Models;
+using BarengIn.Domain;
 
 namespace BarengIn.Desktop.Views;
 
@@ -21,7 +22,25 @@ public partial class LoginWindow : Window
             return;
         }
 
-        AppSession.SignIn(tbUsername.Text!, cbRole.SelectedIndex == 1 ? "Driver" : "Passenger");
+        User? user;
+        try
+        {
+            user = AppDb.Users.Authenticate(tbUsername.Text!.Trim(), tbPassword.Text!);
+        }
+        catch (Exception ex)
+        {
+            await MessageBox.Show(this, "Database error: " + ex.Message);
+            return;
+        }
+
+        if (user == null)
+        {
+            await MessageBox.Show(this, "NIM or password is wrong.");
+            return;
+        }
+
+        // Polymorphism: same call, different result depending on the real class.
+        AppSession.SignIn(tbUsername.Text!, user.GetRoleName());
         Navigator.GoHome(this);
     }
 

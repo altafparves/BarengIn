@@ -17,4 +17,8 @@
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BarengIn.Infrastructure\BarengIn.Infrastructure.csproj" />
+  </ItemGroup>
 </Project>

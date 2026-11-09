@@ -43,9 +43,31 @@ public partial class RegisterWindow : Window
             return;
         }
 
+        string name = tbName.Text!.Trim();
+        string nim = tbNim.Text!.Trim();
+        string faculty = cbFaculty.SelectedItem as string ?? Faculties.All[0];
+
+        try
+        {
+            // The form has no email/phone field, but the database requires both
+            // (NOT NULL + UNIQUE), so we use temporary values built from the NIM.
+            bool ok = AppDb.Users.Register(name, nim + "@mail.ugm.ac.id", nim,
+                                           tbPassword.Text!, nim, faculty, "passenger");
+            if (!ok)
+            {
+                await MessageBox.Show(this, "Registration failed.");
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            await MessageBox.Show(this, "Database error: " + ex.Message);
+            return;
+        }
+
         AppSession.Reset();
-        AppSession.Name = tbName.Text!.Trim();
-        AppSession.Faculty = cbFaculty.SelectedItem as string ?? Faculties.All[0];
+        AppSession.Name = name;
+        AppSession.Faculty = faculty;
         AppSession.VerificationStatus = "Pending";
 
         await MessageBox.Show(this, "Account created. Your KTM is being verified. You can log in now.");
