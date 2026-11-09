@@ -27,3 +27,8 @@ To regenerate the screenshots in `docs/modules/module-7/screenshots`:
 ```bash
 BARENGIN_SCREENSHOTS=1 dotnet test tests/BarengIn.Desktop.Tests --filter ScreenshotTests
 ```
+## Database setup
+1. Create a PostgreSQL database named `barengin` and run `docs/database/schema.sql`.
+2. Set the environment variable `BARENGIN_DB`, e.g.
+   `Host=localhost;Port=5432;Database=barengin;Username=postgres;Password=...`
+3. Restart your terminal, then `dotnet run --project src/BarengIn.Desktop`.
