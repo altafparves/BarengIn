@@ -108,5 +108,23 @@ public class ScreenBehaviorTests
         profile.Click("btnSave");
         Assert.Equal("badminton", AppSession.Hobbies);
         Assert.Equal("Likes early rides.", AppSession.Bio);
+        Assert.Equal("Likes early rides.", AppSession.CurrentUser?.Bio);
+    }
+
+    [AvaloniaFact]
+    public void Driver_PostAndApprove_UpdatesDomainDriverAndTrip()
+    {
+        var driverWindow = NewDriver();
+        var driver = Assert.IsType<BarengIn.Domain.Driver>(AppSession.CurrentUser);
+        Assert.True(driver.CanPublishTrip());
+
+        driverWindow.Find<TextBox>("tbOrigin").Text = "Seturan";
+        driverWindow.Click("btnPost");
+        Assert.Contains(driver.PublishedTrips, t => t.OriginAddress == "Seturan");
+
+        driverWindow.Layout();
+        var firstReq = driverWindow.Find<ListBox>("lvRequests").ItemsSource!.Cast<RequestItem>().First();
+        driverWindow.FindButton("Approve").Press();
+        Assert.Equal("Approved", firstReq.Status);
     }
 }

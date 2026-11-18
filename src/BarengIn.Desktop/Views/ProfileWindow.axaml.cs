@@ -30,6 +30,12 @@ public partial class ProfileWindow : Window
         AppSession.Faculty = cbFaculty.SelectedItem as string ?? AppSession.Faculty;
         AppSession.Hobbies = (tbHobbies.Text ?? "").Trim();
         AppSession.Bio = (tbBio.Text ?? "").Trim();
+
+        // Encapsulation: mutate protected User fields through public UpdateProfile method.
+        string safeName = string.IsNullOrWhiteSpace(AppSession.Name) ? "Student" : AppSession.Name;
+        string safePhone = string.IsNullOrWhiteSpace(AppSession.Nim) ? "08123456789" : AppSession.Nim;
+        AppSession.CurrentUser?.UpdateProfile(safeName, safePhone, AppSession.Bio);
+
         await MessageBox.Show(this, "Profile saved.");
     }
 

@@ -6,13 +6,15 @@ public class RequestItem : INotifyPropertyChanged
 {
     private string status = "Pending";
 
-    public RequestItem(string passenger, string pickup, string faculty)
+    public RequestItem(string passenger, string pickup, string faculty, Guid? requestId = null)
     {
         Passenger = passenger;
         Pickup = pickup;
         Faculty = faculty;
+        RequestId = requestId ?? Guid.NewGuid();
     }
 
+    public Guid RequestId { get; }
     public string Passenger { get; }
     public string Pickup { get; }
     public string Faculty { get; }

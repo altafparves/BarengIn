@@ -41,7 +41,7 @@ public partial class LoginWindow : Window
         }
 
         // Polymorphism: same call, different result depending on the real class.
-        AppSession.SignIn(tbUsername.Text!, user.GetRoleName());
+        AppSession.SignIn(user);
         Navigator.GoHome(this);
     }
 

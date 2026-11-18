@@ -2,6 +2,8 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using BarengIn.Desktop.Logic;
 using BarengIn.Desktop.Models;
+using BarengIn.Domain;
+using BarengIn.Domain.ValueObjects;
 
 namespace BarengIn.Desktop.Views;
 
@@ -39,6 +41,13 @@ public partial class HomeWindow : Window
         {
             await MessageBox.Show(this, "Please select a ride first.");
             return;
+        }
+
+        string pickup = string.IsNullOrWhiteSpace(tbOrigin.Text) ? "Jakal Km 5" : tbOrigin.Text!.Trim();
+        if (AppSession.CurrentUser is Passenger passenger)
+        {
+            var req = new RideRequest(Guid.NewGuid(), passenger.UserId, pickup, new GeoPoint(-7.75, 110.38), "Joining ride");
+            passenger.RecordSubmittedRequest(req);
         }
 
         AppSession.Co2Saved += RideLogic.Co2PerRequest;
