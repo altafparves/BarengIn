@@ -2,17 +2,19 @@ using BarengIn.Domain.ValueObjects;
 
 namespace BarengIn.Domain;
 
-/// <summary>A passenger who also offers trips as a driver.</summary>
+/// <summary>
+/// A passenger who also offers trips as a driver.
+/// Demonstrates OOP Inheritance (User -> Passenger -> Driver), Polymorphism (overrides CanPublishTrip
+/// and GetRoleName), and Encapsulation with private backing collections (vehicles, publishedTrips).
+/// </summary>
 public class Driver : Passenger
 {
     private string licenseNumber;
     private double rating;
     private int totalTripsCompleted;
 
-    /// <summary>Backs the "Driver owns Vehicle" composition; populated through <see cref="AddVehicle"/>.</summary>
+    // Access Modifier (private readonly): internal collections cannot be mutated outside Driver.
     private readonly List<Vehicle> vehicles = [];
-
-    /// <summary>Backs the "Driver publishes Trip" aggregation; not an attribute in the diagram.</summary>
     private readonly List<Trip> publishedTrips = [];
 
     public Driver(
@@ -34,15 +36,16 @@ public class Driver : Passenger
         totalTripsCompleted = 0;
     }
 
-    /// <summary>Vehicles this driver owns, exposed read-only.</summary>
+    /// <summary>Vehicles this driver owns, exposed read-only (Encapsulation).</summary>
     public IReadOnlyList<Vehicle> Vehicles => vehicles;
 
-    /// <summary>Trips this driver has published, exposed read-only.</summary>
+    /// <summary>Trips this driver has published, exposed read-only (Encapsulation).</summary>
     public IReadOnlyList<Trip> PublishedTrips => publishedTrips;
 
-    /// <summary>A driver may publish once verified and with at least one registered vehicle.</summary>
+    /// <summary>Polymorphism: overrides Passenger.CanPublishTrip() (which returns false).</summary>
     public override bool CanPublishTrip() => IsVerified() && vehicles.Count > 0;
 
+    /// <summary>Polymorphism: overrides User.GetRoleName() for Driver accounts.</summary>
     public override string GetRoleName() => "Driver";
 
     public bool AddVehicle(Vehicle vehicle)
@@ -52,33 +55,72 @@ public class Driver : Passenger
         return true;
     }
 
-    /// <summary>
-    /// Not implemented here: the diagram signature carries only a vehicle id, a departure time and
-    /// a seat count, not the origin, destination or route a valid <see cref="Trip"/> needs. The
-    /// Application layer gathers that data and constructs the Trip directly, then calls
-    /// <see cref="RecordPublishedTrip"/> to keep this aggregate consistent.
-    /// </summary>
     public Trip PublishTrip(Guid vehicleId, DateTime departure, int seats) =>
         throw new NotImplementedException(
             "The diagram signature lacks origin/destination/route data; the Application layer constructs the Trip.");
 
+    /// <summary>
+    /// Publishes a new trip after verifying driver eligibility via polymorphic <see cref="CanPublishTrip"/>.
+    /// Encapsulates Trip creation and adds it to the private <c>publishedTrips</c> collection.
+    /// </summary>
+    public Trip PublishNewTrip(
+        Guid vehicleId,
+        string originAddress,
+        GeoPoint originLocation,
+        Guid destinationFacultyId,
+        DateTime departureTime,
+        int seats,
+        decimal costPerSeatIdr)
+    {
+        if (!CanPublishTrip())
+        {
+            throw new InvalidOperationException(
+                "Driver must be verified and have a registered vehicle to publish a trip.");
+        }
+
+        var trip = new Trip(
+            userId,
+            vehicleId,
+            originAddress,
+            originLocation,
+            destinationFacultyId,
+            departureTime,
+            seats,
+            distanceKm: 5.0,
+            polylineJson: string.Empty);
+
+        trip.SetCostPerSeat(new Money(costPerSeatIdr, "IDR"));
+        publishedTrips.Add(trip);
+        return trip;
+    }
+
     public List<RideRequest> ViewIncomingRequests(Guid tripId)
     {
         var trip = publishedTrips.FirstOrDefault(t => t.TripId == tripId)
-            ?? throw new ArgumentException("Trip not found among this driver's published trips.", nameof(tripId));
+            ?? throw new ArgumentException(
+                "Trip not found among this driver's published trips.", nameof(tripId));
 
         return [.. trip.RideRequests];
     }
 
+    /// <summary>
+    /// Encapsulation: validates pending state and seat availability before seating passenger
+    /// and transitioning RideRequest status to Approved.
+    /// </summary>
     public bool ApproveRequest(Guid requestId)
     {
         var (trip, request) = FindRequest(requestId);
-        if (trip is null || request is null)
+        if (trip is null || request is null || !request.IsPending() || !trip.HasAvailableSeat())
         {
             return false;
         }
 
-        return request.Approve() && trip.AddPassenger(request.PassengerId);
+        if (!trip.AddPassenger(request.PassengerId))
+        {
+            return false;
+        }
+
+        return request.Approve();
     }
 
     public bool RejectRequest(Guid requestId, string reason)
@@ -99,10 +141,6 @@ public class Driver : Passenger
         return true;
     }
 
-    /// <summary>
-    /// Registers a trip this driver has published. Not a diagram method: it exists to make the
-    /// "Driver publishes Trip" aggregation a real collection instead of an unreachable one.
-    /// </summary>
     public void RecordPublishedTrip(Trip trip)
     {
         ArgumentNullException.ThrowIfNull(trip);

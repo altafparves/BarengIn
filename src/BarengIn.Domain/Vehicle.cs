@@ -42,6 +42,8 @@ public class Vehicle
         this.seatCapacity = seatCapacity;
     }
 
+    public Guid VehicleId => vehicleId;
+
     public int GetSeatCapacity() => seatCapacity;
 
     public bool UpdateDetails(string brand, string model, string color)

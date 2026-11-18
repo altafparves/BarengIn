@@ -49,6 +49,18 @@ public abstract class User
         createdAt = DateTime.UtcNow;
     }
 
+    /// <summary>Identity, exposed read-only from the protected userId field.</summary>
+    public Guid UserId => userId;
+
+    /// <summary>Student ID (NIU/NIM), exposed read-only from the protected niu field.</summary>
+    public string Niu => niu;
+
+    /// <summary>Full name, exposed read-only from the protected fullName field.</summary>
+    public string FullName => fullName;
+
+    /// <summary>Short bio, exposed read-only from the protected bio field.</summary>
+    public string Bio => bio;
+
     /// <summary>Class schedules this user owns, exposed read-only.</summary>
     public IReadOnlyList<ClassSchedule> ClassSchedules => classSchedules;
 
@@ -88,6 +100,9 @@ public abstract class User
     }
 
     public bool IsVerified() => verificationStatus == VerificationStatus.Verified;
+
+    /// <summary>Marks this user's KTM as verified (encapsulated state change on protected field).</summary>
+    public void MarkVerified() => verificationStatus = VerificationStatus.Verified;
 
     public abstract bool CanPublishTrip();
 

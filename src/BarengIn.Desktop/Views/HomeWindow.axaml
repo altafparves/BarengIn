@@ -1,0 +1,67 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:m="using:BarengIn.Desktop.Models"
+        x:Class="BarengIn.Desktop.Views.HomeWindow"
+        Title="BarengIn - Find a Ride"
+        Width="580" Height="500"
+        CanResize="False"
+        WindowStartupLocation="CenterScreen"
+        Background="White">
+
+    <Grid Margin="20" RowDefinitions="Auto,16,Auto,16,*,12,Auto">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+            <TextBlock x:Name="lblWelcome" Classes="heading" VerticalAlignment="Center" />
+            <Button x:Name="btnProfile" Grid.Column="1" Classes="secondary" Content="Profile"
+                    Width="90" Click="btnProfile_Click" />
+        </Grid>
+
+        <Grid Grid.Row="2" ColumnDefinitions="Auto,*,16,170" RowDefinitions="Auto,8,Auto,8,Auto">
+            <TextBlock Grid.Row="0" Classes="label" Text="Pickup area :" Margin="0,0,16,0" />
+            <TextBox x:Name="tbOrigin" Grid.Row="0" Grid.Column="1" PlaceholderText="e.g. Jakal Km 5" />
+
+            <TextBlock Grid.Row="2" Classes="label" Text="Destination :" Margin="0,0,16,0" />
+            <ComboBox x:Name="cbFaculty" Grid.Row="2" Grid.Column="1" HorizontalAlignment="Stretch" />
+
+            <TextBlock Grid.Row="4" Classes="label" Text="Class starts :" Margin="0,0,16,0" />
+            <TimePicker x:Name="dtpTime" Grid.Row="4" Grid.Column="1" ClockIdentifier="24HourClock"
+                        SelectedTime="08:00:00" HorizontalAlignment="Left" />
+
+            <Button x:Name="btnFind" Grid.Row="0" Grid.RowSpan="5" Grid.Column="3" Classes="primary"
+                    Content="Find Rides" HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                    Height="45" Click="btnFind_Click" />
+        </Grid>
+
+        <Border Grid.Row="4" BorderBrush="#D0D0D0" BorderThickness="1">
+            <Grid RowDefinitions="Auto,*">
+                <Grid Background="#F3F3F3" Margin="0" ColumnDefinitions="130,160,80,60,*" Height="30">
+                    <TextBlock Grid.Column="0" Text="Driver" FontWeight="SemiBold" VerticalAlignment="Center" Margin="12,0" />
+                    <TextBlock Grid.Column="1" Text="Faculty" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="2" Text="Departs" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="3" Text="Seats" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="4" Text="Cost" FontWeight="SemiBold" VerticalAlignment="Center" />
+                </Grid>
+                <ListBox x:Name="lvRides" Grid.Row="1">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="m:RideRow">
+                            <Grid ColumnDefinitions="118,160,80,60,*">
+                                <TextBlock Grid.Column="0" Text="{Binding Driver}" />
+                                <TextBlock Grid.Column="1" Text="{Binding Faculty}" />
+                                <TextBlock Grid.Column="2" Text="{Binding Departs}" />
+                                <TextBlock Grid.Column="3" Text="{Binding Seats}" />
+                                <TextBlock Grid.Column="4" Text="{Binding Cost}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="6" ColumnDefinitions="150,16,*,Auto">
+            <Button x:Name="btnRequest" Grid.Column="0" Classes="primary" Content="Request Ride"
+                    HorizontalAlignment="Stretch" Height="40" Click="btnRequest_Click" />
+            <TextBlock x:Name="lblCo2" Grid.Column="2" Classes="label" />
+            <Button x:Name="btnLogout" Grid.Column="3" Classes="secondary" Content="Logout"
+                    Width="100" Height="40" Click="btnLogout_Click" />
+        </Grid>
+    </Grid>
+</Window>

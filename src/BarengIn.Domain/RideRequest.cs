@@ -43,6 +43,12 @@ public class RideRequest
     /// <summary>Requesting passenger, exposed read-only so a <see cref="Driver"/> can seat them on approval.</summary>
     public Guid PassengerId => passengerId;
 
+    /// <summary>Pickup address, exposed read-only from the private pickupAddress field.</summary>
+    public string PickupAddress => pickupAddress;
+
+    /// <summary>Current request status, exposed read-only from the private status field.</summary>
+    public RequestStatus Status => status;
+
     public bool Approve()
     {
         if (status != RequestStatus.Pending)

@@ -1,0 +1,43 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="BarengIn.Desktop.Views.ProfileWindow"
+        Title="BarengIn - Profile"
+        Width="420" Height="560"
+        CanResize="False"
+        WindowStartupLocation="CenterScreen"
+        Background="White">
+
+    <StackPanel Margin="24" Spacing="6">
+        <Grid ColumnDefinitions="Auto,16,*" Margin="0,0,0,10">
+            <Border Grid.Column="0" Width="64" Height="64" CornerRadius="32" Background="#228B5E">
+                <TextBlock x:Name="lblInitials" Foreground="White" FontSize="24" FontWeight="Bold"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
+                <TextBlock x:Name="lblName" Classes="heading" />
+                <TextBlock x:Name="lblNimRole" Classes="muted" />
+                <Border x:Name="badgeStatus" HorizontalAlignment="Left" CornerRadius="10" Padding="10,2"
+                        Margin="0,4,0,0">
+                    <TextBlock x:Name="lblStatus" FontSize="12" FontWeight="SemiBold" />
+                </Border>
+            </StackPanel>
+        </Grid>
+
+        <TextBlock Text="Faculty :" />
+        <ComboBox x:Name="cbFaculty" HorizontalAlignment="Stretch" />
+
+        <TextBlock Text="Hobbies :" Margin="0,8,0,0" />
+        <TextBox x:Name="tbHobbies" PlaceholderText="e.g. badminton, coffee, indie music" />
+
+        <TextBlock Text="Short bio :" Margin="0,8,0,0" />
+        <TextBox x:Name="tbBio" AcceptsReturn="True" TextWrapping="Wrap" Height="110"
+                 PlaceholderText="Tell your ride mates a bit about yourself" />
+
+        <Grid ColumnDefinitions="*,12,*" Margin="0,18,0,0">
+            <Button x:Name="btnSave" Grid.Column="0" Classes="primary" Content="Save"
+                    HorizontalAlignment="Stretch" Height="40" Click="btnSave_Click" />
+            <Button x:Name="btnBack" Grid.Column="2" Classes="secondary" Content="Back"
+                    HorizontalAlignment="Stretch" Height="40" Click="btnBack_Click" />
+        </Grid>
+    </StackPanel>
+</Window>
