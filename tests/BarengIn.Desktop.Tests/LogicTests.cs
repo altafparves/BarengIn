@@ -37,6 +37,55 @@ public class LogicTests
         Assert.True(driver.ApproveRequest(req.RequestId));
         Assert.Equal(2, trip.AvailableSeats);
         Assert.Equal(RequestStatus.Approved, req.Status);
+
+        // Review Focus #4: Rejecting an already-approved request returns false and keeps seats unchanged.
+        Assert.False(driver.RejectRequest(req.RequestId, "Changed mind"));
+        Assert.Equal(2, trip.AvailableSeats);
+        Assert.Equal(RequestStatus.Approved, req.Status);
+    }
+
+    [Fact]
+    public void ApproveRequest_WhenTripIsFull_DoesNotCorruptRequestStatusToApproved()
+    {
+        var driver = new Driver("24/532894", "Calvin", "c@ugm.ac.id", "hash", "082", Guid.Empty, "Seturan", new GeoPoint(-7.7, 110.4), "AB-1234-XX");
+        driver.MarkVerified();
+        var vehicle = new Vehicle(driver.UserId, "AB 1234 XY", "Honda", "Jazz", "White", VehicleType.Car, 4);
+        driver.AddVehicle(vehicle);
+
+        var trip = driver.PublishNewTrip(vehicle.VehicleId, "Seturan", new GeoPoint(-7.7, 110.4), Guid.Empty, DateTime.Today.AddHours(7.5), 1, 5000m);
+        var req1 = new RideRequest(trip.TripId, Guid.NewGuid(), "Jakal Km 5", new GeoPoint(-7.75, 110.38), "First");
+        var req2 = new RideRequest(trip.TripId, Guid.NewGuid(), "Condongcatur", new GeoPoint(-7.76, 110.40), "Second");
+        trip.ReceiveRequest(req1);
+        trip.ReceiveRequest(req2);
+
+        Assert.True(driver.ApproveRequest(req1.RequestId));
+        Assert.Equal(0, trip.AvailableSeats);
+
+        // Second request must fail because trip is full, and req2 must remain Pending so it can still be rejected.
+        Assert.False(driver.ApproveRequest(req2.RequestId));
+        Assert.Equal(RequestStatus.Pending, req2.Status);
+        Assert.True(driver.RejectRequest(req2.RequestId, "Trip full"));
+        Assert.Equal(RequestStatus.Rejected, req2.Status);
+    }
+
+    [Fact]
+    public void AppDb_WhenEnvPointsToUnreachableServer_IsAvailableReturnsFalseAndFallbackWorks()
+    {
+        string? prev = Environment.GetEnvironmentVariable("BARENGIN_DB");
+        try
+        {
+            Environment.SetEnvironmentVariable("BARENGIN_DB", "Host=127.0.0.1;Port=54329;Database=barengin;Username=postgres;Password=secret;Timeout=1");
+            BarengIn.Desktop.AppDb.ResetAvailabilityCache();
+            Assert.False(BarengIn.Desktop.AppDb.IsAvailable);
+            var user = BarengIn.Desktop.AppDb.AuthenticateOrFallback("24/536741", "pw", "Driver");
+            Assert.NotNull(user);
+            Assert.Equal("Driver", user!.GetRoleName());
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("BARENGIN_DB", prev);
+            BarengIn.Desktop.AppDb.ResetAvailabilityCache();
+        }
     }
 
     [Fact]

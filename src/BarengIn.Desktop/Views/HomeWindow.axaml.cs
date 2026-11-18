@@ -32,6 +32,18 @@ public partial class HomeWindow : Window
         }
 
         string faculty = cbFaculty.SelectedItem as string ?? Faculties.All[0];
+        if (AppDb.IsAvailable)
+        {
+            var dbRides = AppDb.Rides.FindRides(faculty)
+                .Select(r => new RideRow(r.DriverName, r.Faculty, r.Departs, r.Seats, Display.Rupiah((int)r.Cost), r.RideId))
+                .ToList();
+            if (dbRides.Count > 0)
+            {
+                lvRides.ItemsSource = dbRides;
+                return;
+            }
+        }
+
         lvRides.ItemsSource = RideLogic.Find(faculty, dtpTime.SelectedTime ?? TimeSpan.Zero);
     }
 
@@ -48,6 +60,11 @@ public partial class HomeWindow : Window
         {
             var req = new RideRequest(Guid.NewGuid(), passenger.UserId, pickup, new GeoPoint(-7.75, 110.38), "Joining ride");
             passenger.RecordSubmittedRequest(req);
+        }
+
+        if (AppDb.IsAvailable && ride.RideId > 0)
+        {
+            AppDb.Rides.InsertRequest(ride.RideId, AppSession.Nim, pickup);
         }
 
         AppSession.Co2Saved += RideLogic.Co2PerRequest;

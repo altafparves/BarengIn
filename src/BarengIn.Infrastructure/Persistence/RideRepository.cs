@@ -1,6 +1,3 @@
-using BarengIn.Domain;
-using BarengIn.Domain.Enums;
-using BarengIn.Domain.ValueObjects;
 using Npgsql;
 
 namespace BarengIn.Infrastructure.Persistence;
@@ -10,6 +7,11 @@ public sealed class RideRepository
     private readonly Database db;
 
     public RideRepository(Database db) => this.db = db;
+
+    public static string MapRequestStatus(string status) =>
+        status.Equals("approved", StringComparison.OrdinalIgnoreCase)
+            ? "accepted"
+            : status.ToLowerInvariant();
 
     public void EnsureSeedData(IEnumerable<string> faculties)
     {
@@ -35,39 +37,60 @@ public sealed class RideRepository
         decimal costPerSeat)
     {
         using var conn = db.Open();
-        using var cmd = new NpgsqlCommand(@"
-            WITH drv AS (
-                SELECT u.user_id FROM users u WHERE u.ktm_number = @nim LIMIT 1
-            ),
-            ins_drv AS (
-                INSERT INTO driver (user_id, license_number)
-                SELECT user_id, 'AB-' || user_id || '-UGM' FROM drv
-                ON CONFLICT (user_id) DO NOTHING
-            ),
-            ins_veh AS (
-                INSERT INTO vehicle (driver_id, plate_number, model, color, seat_capacity)
-                SELECT user_id, 'AB-' || user_id || '-XY', 'Honda Jazz', 'White', 4 FROM drv
-                ON CONFLICT (plate_number) DO NOTHING
-            )
+        using var tx = conn.BeginTransaction();
+
+        using var userCmd = new NpgsqlCommand(
+            "SELECT user_id FROM users WHERE ktm_number = @nim LIMIT 1;", conn, tx);
+        userCmd.Parameters.AddWithValue("nim", driverNim);
+        if (userCmd.ExecuteScalar() is not int userId)
+        {
+            return 0;
+        }
+
+        using (var drvCmd = new NpgsqlCommand(@"
+            INSERT INTO driver (user_id, license_number)
+            VALUES (@uid, @lic)
+            ON CONFLICT (user_id) DO NOTHING;", conn, tx))
+        {
+            drvCmd.Parameters.AddWithValue("uid", userId);
+            drvCmd.Parameters.AddWithValue("lic", $"AB-{userId}-UGM");
+            drvCmd.ExecuteNonQuery();
+        }
+
+        int vehicleId;
+        using (var vehCmd = new NpgsqlCommand(@"
+            INSERT INTO vehicle (driver_id, plate_number, model, color, seat_capacity)
+            VALUES (@uid, @plate, 'Honda Jazz', 'White', 4)
+            ON CONFLICT (plate_number) DO UPDATE SET model = EXCLUDED.model
+            RETURNING vehicle_id;", conn, tx))
+        {
+            vehCmd.Parameters.AddWithValue("uid", userId);
+            vehCmd.Parameters.AddWithValue("plate", $"AB-{userId}-XY");
+            vehicleId = (int)vehCmd.ExecuteScalar()!;
+        }
+
+        using var rideCmd = new NpgsqlCommand(@"
             INSERT INTO ride (driver_id, vehicle_id, destination_faculty_id, origin_address,
                               origin_lat, origin_lng, departure_time, available_seats, cost_per_seat, status)
             VALUES (
-                (SELECT user_id FROM drv),
-                (SELECT v.vehicle_id FROM vehicle v JOIN drv ON v.driver_id = drv.user_id LIMIT 1),
+                @uid,
+                @vid,
                 (SELECT faculty_id FROM faculty WHERE name = @faculty LIMIT 1),
                 @origin, -7.75, 110.38, @departure, @seats, @cost, 'scheduled'
             )
-            RETURNING ride_id;", conn);
+            RETURNING ride_id;", conn, tx);
 
-        cmd.Parameters.AddWithValue("nim", driverNim);
-        cmd.Parameters.AddWithValue("faculty", facultyName);
-        cmd.Parameters.AddWithValue("origin", originAddress);
-        cmd.Parameters.AddWithValue("departure", departureTime);
-        cmd.Parameters.AddWithValue("seats", (short)seats);
-        cmd.Parameters.AddWithValue("cost", costPerSeat);
+        rideCmd.Parameters.AddWithValue("uid", userId);
+        rideCmd.Parameters.AddWithValue("vid", vehicleId);
+        rideCmd.Parameters.AddWithValue("faculty", facultyName);
+        rideCmd.Parameters.AddWithValue("origin", originAddress);
+        rideCmd.Parameters.AddWithValue("departure", departureTime);
+        rideCmd.Parameters.AddWithValue("seats", (short)seats);
+        rideCmd.Parameters.AddWithValue("cost", costPerSeat);
 
-        object? result = cmd.ExecuteScalar();
-        return result is int id ? id : 0;
+        int rideId = rideCmd.ExecuteScalar() is int id ? id : 0;
+        tx.Commit();
+        return rideId;
     }
 
     public List<(int RideId, string DriverName, string Faculty, string Departs, int Seats, decimal Cost)> FindRides(string facultyName)
@@ -101,26 +124,38 @@ public sealed class RideRepository
     public int InsertRequest(int rideId, string passengerNim, string pickupAddress)
     {
         using var conn = db.Open();
-        using var cmd = new NpgsqlCommand(@"
-            WITH pax AS (
-                SELECT u.user_id FROM users u WHERE u.ktm_number = @nim LIMIT 1
-            ),
-            ins_pax AS (
-                INSERT INTO passenger (user_id, home_address, default_pickup_lat, default_pickup_lng)
-                SELECT user_id, @pickup, -7.75, 110.38 FROM pax
-                ON CONFLICT (user_id) DO NOTHING
-            )
+        using var tx = conn.BeginTransaction();
+
+        using var userCmd = new NpgsqlCommand(
+            "SELECT user_id FROM users WHERE ktm_number = @nim LIMIT 1;", conn, tx);
+        userCmd.Parameters.AddWithValue("nim", passengerNim);
+        if (userCmd.ExecuteScalar() is not int userId)
+        {
+            return 0;
+        }
+
+        using (var paxCmd = new NpgsqlCommand(@"
+            INSERT INTO passenger (user_id, home_address, default_pickup_lat, default_pickup_lng)
+            VALUES (@uid, @pickup, -7.75, 110.38)
+            ON CONFLICT (user_id) DO NOTHING;", conn, tx))
+        {
+            paxCmd.Parameters.AddWithValue("uid", userId);
+            paxCmd.Parameters.AddWithValue("pickup", pickupAddress);
+            paxCmd.ExecuteNonQuery();
+        }
+
+        using var reqCmd = new NpgsqlCommand(@"
             INSERT INTO ride_request (ride_id, passenger_id, pickup_address, pickup_lat, pickup_lng, status)
-            VALUES (@rideId, (SELECT user_id FROM pax), @pickup, -7.75, 110.38, 'pending')
+            VALUES (@rideId, @uid, @pickup, -7.75, 110.38, 'pending')
             ON CONFLICT (ride_id, passenger_id) DO UPDATE SET pickup_address = EXCLUDED.pickup_address
-            RETURNING request_id;", conn);
+            RETURNING request_id;", conn, tx);
+        reqCmd.Parameters.AddWithValue("rideId", rideId);
+        reqCmd.Parameters.AddWithValue("uid", userId);
+        reqCmd.Parameters.AddWithValue("pickup", pickupAddress);
 
-        cmd.Parameters.AddWithValue("rideId", rideId);
-        cmd.Parameters.AddWithValue("nim", passengerNim);
-        cmd.Parameters.AddWithValue("pickup", pickupAddress);
-
-        object? result = cmd.ExecuteScalar();
-        return result is int id ? id : 0;
+        int reqId = reqCmd.ExecuteScalar() is int id ? id : 0;
+        tx.Commit();
+        return reqId;
     }
 
     public bool UpdateRequestStatus(int requestId, string status)
@@ -131,7 +166,7 @@ public sealed class RideRepository
             SET status = @status::request_status_type, responded_at = now()
             WHERE request_id = @id;", conn);
         cmd.Parameters.AddWithValue("id", requestId);
-        cmd.Parameters.AddWithValue("status", status.ToLowerInvariant());
+        cmd.Parameters.AddWithValue("status", MapRequestStatus(status));
         return cmd.ExecuteNonQuery() == 1;
     }
 }

@@ -120,11 +120,17 @@ public class ScreenBehaviorTests
 
         driverWindow.Find<TextBox>("tbOrigin").Text = "Seturan";
         driverWindow.Click("btnPost");
-        Assert.Contains(driver.PublishedTrips, t => t.OriginAddress == "Seturan");
+        var postedTrip = Assert.Single(driver.PublishedTrips, t => t.OriginAddress == "Seturan");
+        Assert.Equal(3, postedTrip.AvailableSeats);
 
         driverWindow.Layout();
         var firstReq = driverWindow.Find<ListBox>("lvRequests").ItemsSource!.Cast<RequestItem>().First();
         driverWindow.FindButton("Approve").Press();
         Assert.Equal("Approved", firstReq.Status);
+
+        // Approving a request decrements both the Domain Trip.AvailableSeats and the visible TripRow.Seats in lvTrips.
+        Assert.Equal(2, postedTrip.AvailableSeats);
+        var tripRow = driverWindow.Find<ListBox>("lvTrips").ItemsSource!.Cast<TripRow>().First(r => r.Pickup == "Seturan");
+        Assert.Equal(2, tripRow.Seats);
     }
 }

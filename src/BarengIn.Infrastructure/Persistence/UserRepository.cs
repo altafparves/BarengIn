@@ -14,24 +14,58 @@ public sealed class UserRepository
                          string ktmNumber, string facultyName, string role)
     {
         using var conn = db.Open();
-        using var cmd = new NpgsqlCommand(@"
+        using var tx = conn.BeginTransaction();
+
+        using (var facCmd = new NpgsqlCommand(@"
             INSERT INTO faculty (name, short_name, latitude, longitude)
             VALUES (@faculty, LEFT(@faculty, 20), -7.7654, 110.3723)
-            ON CONFLICT (name) DO NOTHING;
+            ON CONFLICT (name) DO NOTHING;", conn, tx))
+        {
+            facCmd.Parameters.AddWithValue("faculty", facultyName);
+            facCmd.ExecuteNonQuery();
+        }
 
+        int userId;
+        using (var usrCmd = new NpgsqlCommand(@"
             INSERT INTO users (faculty_id, full_name, email, phone_number, password_hash,
                                ktm_number, role, verification_status)
             VALUES ((SELECT faculty_id FROM faculty WHERE name = @faculty),
                     @name, @email, @phone, @hash, @ktm,
-                    @role::user_role_type, 'pending');", conn);
-        cmd.Parameters.AddWithValue("faculty", facultyName);
-        cmd.Parameters.AddWithValue("name", fullName);
-        cmd.Parameters.AddWithValue("email", email);
-        cmd.Parameters.AddWithValue("phone", phone);
-        cmd.Parameters.AddWithValue("hash", BCrypt.Net.BCrypt.HashPassword(password));
-        cmd.Parameters.AddWithValue("ktm", ktmNumber);
-        cmd.Parameters.AddWithValue("role", role.ToLower());
-        return cmd.ExecuteNonQuery() >= 1;
+                    @role::user_role_type, 'pending')
+            RETURNING user_id;", conn, tx))
+        {
+            usrCmd.Parameters.AddWithValue("faculty", facultyName);
+            usrCmd.Parameters.AddWithValue("name", fullName);
+            usrCmd.Parameters.AddWithValue("email", email);
+            usrCmd.Parameters.AddWithValue("phone", phone);
+            usrCmd.Parameters.AddWithValue("hash", BCrypt.Net.BCrypt.HashPassword(password));
+            usrCmd.Parameters.AddWithValue("ktm", ktmNumber);
+            usrCmd.Parameters.AddWithValue("role", role.ToLowerInvariant());
+            userId = (int)usrCmd.ExecuteScalar()!;
+        }
+
+        if (role.Equals("driver", StringComparison.OrdinalIgnoreCase))
+        {
+            using var drvCmd = new NpgsqlCommand(@"
+                INSERT INTO driver (user_id, license_number)
+                VALUES (@uid, @lic)
+                ON CONFLICT (user_id) DO NOTHING;", conn, tx);
+            drvCmd.Parameters.AddWithValue("uid", userId);
+            drvCmd.Parameters.AddWithValue("lic", $"AB-{userId}-UGM");
+            drvCmd.ExecuteNonQuery();
+        }
+        else if (!role.Equals("admin", StringComparison.OrdinalIgnoreCase))
+        {
+            using var paxCmd = new NpgsqlCommand(@"
+                INSERT INTO passenger (user_id, home_address, default_pickup_lat, default_pickup_lng)
+                VALUES (@uid, '-', -7.75, 110.38)
+                ON CONFLICT (user_id) DO NOTHING;", conn, tx);
+            paxCmd.Parameters.AddWithValue("uid", userId);
+            paxCmd.ExecuteNonQuery();
+        }
+
+        tx.Commit();
+        return userId > 0;
     }
 
     /// <summary>
@@ -46,7 +80,8 @@ public sealed class UserRepository
             SELECT u.full_name, u.email, u.phone_number, u.password_hash, u.ktm_number,
                    u.role::text,
                    COALESCE(p.home_address, '-'),
-                   COALESCE(d.license_number, '-')
+                   COALESCE(d.license_number, '-'),
+                   u.verification_status::text
             FROM users u
             LEFT JOIN passenger p ON p.user_id = u.user_id
             LEFT JOIN driver d    ON d.user_id = u.user_id
@@ -64,12 +99,14 @@ public sealed class UserRepository
         string role = r.GetString(5);
         string address = r.GetString(6);
         string license = r.GetString(7);
+        string verificationStatus = r.GetString(8);
 
         if (!BCrypt.Net.BCrypt.Verify(password, hash)) return null;
 
-        // Placeholders (Guid.Empty, GeoPoint 0,0) until faculty/location are loaded from the DB.
-        User user = BuildUserForRole(niu, name, email, hash, phone, role, address, license);
-        return user;
+        bool isVerified = !verificationStatus.Equals("unverified", StringComparison.OrdinalIgnoreCase)
+                       && !verificationStatus.Equals("rejected", StringComparison.OrdinalIgnoreCase);
+
+        return BuildUserForRole(niu, name, email, hash, phone, role, address, license, isVerified);
     }
 
     public static User BuildUserForRole(
@@ -80,13 +117,18 @@ public sealed class UserRepository
         string phone,
         string role,
         string address = "Jakal Km 5",
-        string license = "AB-1234-UGM")
+        string license = "AB-1234-UGM",
+        bool verified = true)
     {
         if (role.Equals("driver", StringComparison.OrdinalIgnoreCase))
         {
             var driver = new Driver(niu, name, email, hash, phone, Guid.Empty,
                                     address, new GeoPoint(-7.75, 110.38), license);
-            driver.MarkVerified();
+            if (verified)
+            {
+                driver.MarkVerified();
+            }
+
             driver.AddVehicle(new Vehicle(driver.UserId, "AB 1234 XY", "Honda", "Jazz", "White", VehicleType.Car, 4));
             return driver;
         }
@@ -94,13 +136,21 @@ public sealed class UserRepository
         if (role.Equals("admin", StringComparison.OrdinalIgnoreCase))
         {
             var admin = new Admin(niu, name, email, hash, phone, Guid.Empty, "DTETI", 1);
-            admin.MarkVerified();
+            if (verified)
+            {
+                admin.MarkVerified();
+            }
+
             return admin;
         }
 
         var passenger = new Passenger(niu, name, email, hash, phone, Guid.Empty,
                                       address, new GeoPoint(-7.75, 110.38));
-        passenger.MarkVerified();
+        if (verified)
+        {
+            passenger.MarkVerified();
+        }
+
         return passenger;
     }
 }

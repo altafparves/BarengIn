@@ -10,9 +10,8 @@ namespace BarengIn.Desktop.Views;
 
 public partial class DriverWindow : Window
 {
-    private readonly ObservableCollection<TripRow> trips = new();
+    private readonly ObservableCollection<TripRow> trips;
     private readonly Driver activeDriver;
-    private readonly Trip defaultIncomingTrip;
 
     public DriverWindow()
     {
@@ -20,43 +19,18 @@ public partial class DriverWindow : Window
         lblWelcome.Text = "Hi, " + AppSession.Name + " (" + AppSession.Role + ")";
         cbFaculty.ItemsSource = Faculties.All;
         cbFaculty.SelectedItem = AppSession.Faculty;
-        lvTrips.ItemsSource = trips;
 
-        activeDriver = AppSession.CurrentUser as Driver
-            ?? (Driver)BarengIn.Infrastructure.Persistence.UserRepository.BuildUserForRole(
-                string.IsNullOrWhiteSpace(AppSession.Nim) ? "24/536741" : AppSession.Nim,
-                string.IsNullOrWhiteSpace(AppSession.Name) ? "Driver" : AppSession.Name,
-                "driver@mail.ugm.ac.id",
-                "hash",
-                "08123456789",
-                "Driver");
-
-        // Seed an active domain Trip to hold the incoming RideRequests so Approve/Reject run through Domain OOP logic.
-        defaultIncomingTrip = new Trip(
-            activeDriver.UserId,
-            activeDriver.Vehicles[0].VehicleId,
-            "Jakal Km 5",
-            new GeoPoint(-7.75, 110.38),
-            Guid.Empty,
-            DateTime.Today.AddHours(7.5),
-            availableSeats: 3,
-            distanceKm: 5.0,
-            polylineJson: string.Empty);
-        activeDriver.RecordPublishedTrip(defaultIncomingTrip);
-
-        var req1 = new RideRequest(defaultIncomingTrip.TripId, Guid.NewGuid(), "Jakal Km 5", new GeoPoint(-7.75, 110.38), "Morning class");
-        var req2 = new RideRequest(defaultIncomingTrip.TripId, Guid.NewGuid(), "Condongcatur", new GeoPoint(-7.76, 110.40), "Morning class");
-        var req3 = new RideRequest(defaultIncomingTrip.TripId, Guid.NewGuid(), "Seturan", new GeoPoint(-7.77, 110.41), "Morning class");
-        defaultIncomingTrip.ReceiveRequest(req1);
-        defaultIncomingTrip.ReceiveRequest(req2);
-        defaultIncomingTrip.ReceiveRequest(req3);
-
-        lvRequests.ItemsSource = new ObservableCollection<RequestItem>
+        if (AppSession.CurrentUser is not Driver)
         {
-            new("Rani Putri", req1.PickupAddress, "MIPA", req1.RequestId),
-            new("Budi Santoso", req2.PickupAddress, "Engineering (FT)", req2.RequestId),
-            new("Sari Dewi", req3.PickupAddress, "Medicine", req3.RequestId),
-        };
+            AppSession.SignIn(
+                string.IsNullOrWhiteSpace(AppSession.Nim) ? "24/536741" : AppSession.Nim,
+                "Driver");
+        }
+
+        activeDriver = (Driver)AppSession.CurrentUser!;
+        trips = AppSession.DriverTrips;
+        lvTrips.ItemsSource = trips;
+        lvRequests.ItemsSource = AppSession.DriverRequests;
     }
 
     private async void btnPost_Click(object? sender, RoutedEventArgs e)
@@ -90,17 +64,10 @@ public partial class DriverWindow : Window
             seats,
             cost);
 
-        if (AppDb.IsDatabaseConfigured)
+        if (AppDb.IsAvailable)
         {
-            try
-            {
-                AppDb.Rides.EnsureSeedData(Faculties.All);
-                AppDb.Rides.InsertRide(AppSession.Nim, origin, faculty, DateTime.Today.Add(time), seats, cost);
-            }
-            catch
-            {
-                // Keep UI responsive if DB insert fails.
-            }
+            AppDb.Rides.EnsureSeedData(Faculties.All);
+            AppDb.Rides.InsertRide(AppSession.Nim, origin, faculty, DateTime.Today.Add(time), seats, cost);
         }
 
         trips.Add(new TripRow(
@@ -108,7 +75,8 @@ public partial class DriverWindow : Window
             faculty,
             time.ToString(@"hh\:mm"),
             trip.AvailableSeats,
-            Display.Rupiah(cost)));
+            Display.Rupiah(cost),
+            trip.TripId));
         tbOrigin.Text = "";
     }
 
@@ -120,6 +88,22 @@ public partial class DriverWindow : Window
             if (activeDriver.ApproveRequest(item.RequestId))
             {
                 item.Status = "Approved";
+
+                // Sync the decremented seat count to the visible TripRow in lvTrips.
+                var targetRow = trips.FirstOrDefault();
+                if (targetRow is not null)
+                {
+                    var targetTrip = activeDriver.PublishedTrips.FirstOrDefault(t => t.TripId == targetRow.TripId);
+                    if (targetTrip is not null && targetTrip != AppSession.SeededDriverTrip)
+                    {
+                        targetTrip.AddPassenger(Guid.NewGuid());
+                        targetRow.Seats = targetTrip.AvailableSeats;
+                    }
+                    else if (AppSession.SeededDriverTrip is not null)
+                    {
+                        targetRow.Seats = AppSession.SeededDriverTrip.AvailableSeats;
+                    }
+                }
             }
         }
     }

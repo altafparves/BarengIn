@@ -6,27 +6,27 @@ using BarengIn.Desktop.Views;
 
 namespace BarengIn.Desktop.Tests;
 
-// Regenerates the PNGs used in the Module 7 worksheet.
+// Regenerates the PNGs used in the Module 7 & Module 9 worksheets.
 // Run with: BARENGIN_SCREENSHOTS=1 dotnet test --filter ScreenshotTests
 public class ScreenshotTests
 {
-    private static string OutputDir()
+    private static string OutputDir(string moduleName = "module-9")
     {
         string? dir = AppContext.BaseDirectory;
         while (dir != null && !File.Exists(Path.Combine(dir, "BarengIn.sln")))
         {
             dir = Path.GetDirectoryName(dir);
         }
-        string path = Path.Combine(dir ?? ".", "docs", "modules", "module-7", "screenshots");
+        string path = Path.Combine(dir ?? ".", "docs", "modules", moduleName, "screenshots");
         Directory.CreateDirectory(path);
         return path;
     }
 
-    private static void Shot(Window window, string name)
+    private static void Shot(Window window, string name, string moduleName = "module-9")
     {
         window.Show();
         window.Layout();
-        window.CaptureRenderedFrame()!.Save(Path.Combine(OutputDir(), name + ".png"));
+        window.CaptureRenderedFrame()!.Save(Path.Combine(OutputDir(moduleName), name + ".png"));
     }
 
     [AvaloniaFact]
@@ -75,15 +75,5 @@ public class ScreenshotTests
         AppSession.Bio = "Commutes from Jakal every day. Happy to chat or ride in silence.";
         var profile = new ProfileWindow();
         Shot(profile, "05-profile");
-
-        string mod9Dir = Path.Combine(
-            Path.GetDirectoryName(Path.GetDirectoryName(OutputDir()))!,
-            "module-9",
-            "screenshots");
-        Directory.CreateDirectory(mod9Dir);
-        foreach (string file in Directory.GetFiles(OutputDir(), "*.png"))
-        {
-            File.Copy(file, Path.Combine(mod9Dir, Path.GetFileName(file)), overwrite: true);
-        }
     }
 }
