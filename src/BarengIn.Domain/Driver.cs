@@ -62,6 +62,40 @@ public class Driver : Passenger
         throw new NotImplementedException(
             "The diagram signature lacks origin/destination/route data; the Application layer constructs the Trip.");
 
+    /// <summary>
+    /// Publishes a new trip after verifying driver eligibility via polymorphic <see cref="CanPublishTrip"/>.
+    /// Encapsulates Trip creation and adds it to the private <c>publishedTrips</c> collection.
+    /// </summary>
+    public Trip PublishNewTrip(
+        Guid vehicleId,
+        string originAddress,
+        GeoPoint originLocation,
+        Guid destinationFacultyId,
+        DateTime departureTime,
+        int seats,
+        decimal costPerSeatIdr)
+    {
+        if (!CanPublishTrip())
+        {
+            throw new InvalidOperationException("Driver must be verified and have a registered vehicle to publish a trip.");
+        }
+
+        var trip = new Trip(
+            userId,
+            vehicleId,
+            originAddress,
+            originLocation,
+            destinationFacultyId,
+            departureTime,
+            seats,
+            distanceKm: 5.0,
+            polylineJson: string.Empty);
+
+        trip.SetCostPerSeat(new Money(costPerSeatIdr, "IDR"));
+        publishedTrips.Add(trip);
+        return trip;
+    }
+
     public List<RideRequest> ViewIncomingRequests(Guid tripId)
     {
         var trip = publishedTrips.FirstOrDefault(t => t.TripId == tripId)

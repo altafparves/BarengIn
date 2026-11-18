@@ -73,6 +73,18 @@ public class Trip
     /// <summary>Identity, exposed read-only so a <see cref="Driver"/> can match trips by id.</summary>
     public Guid TripId => tripId;
 
+    /// <summary>Origin pickup address, exposed read-only from the private originAddress field.</summary>
+    public string OriginAddress => originAddress;
+
+    /// <summary>Seats currently available, exposed read-only from the private availableSeats field.</summary>
+    public int AvailableSeats => availableSeats;
+
+    /// <summary>Cost per seat, exposed read-only from the private costPerSeat field.</summary>
+    public Money CostPerSeat => costPerSeat;
+
+    /// <summary>Current trip status, exposed read-only from the private status field.</summary>
+    public TripStatus Status => status;
+
     /// <summary>Exposed read-only so <see cref="ClassSchedule.MatchesTrip"/> can compare against it.</summary>
     public Guid DestinationFacultyId => destinationFacultyId;
 
@@ -131,6 +143,12 @@ public class Trip
         var totalCost = fuelPrice * (decimal)distanceKm;
         costPerSeat = new Money(totalCost, "IDR").Split(totalSeats);
         return costPerSeat;
+    }
+
+    public void SetCostPerSeat(Money cost)
+    {
+        ArgumentNullException.ThrowIfNull(cost);
+        costPerSeat = cost;
     }
 
     /// <summary>

@@ -1,9 +1,44 @@
 using BarengIn.Desktop.Logic;
+using BarengIn.Domain;
+using BarengIn.Domain.Enums;
+using BarengIn.Domain.ValueObjects;
 
 namespace BarengIn.Desktop.Tests;
 
 public class LogicTests
 {
+    [Fact]
+    public void Polymorphism_CanPublishTrip_FalseForPassenger_TrueForVerifiedDriverWithVehicle()
+    {
+        User passenger = new Passenger("24/536741", "Altaf", "a@ugm.ac.id", "hash", "081", Guid.Empty, "Jakal", new GeoPoint(-7.7, 110.3));
+        var driver = new Driver("24/532894", "Calvin", "c@ugm.ac.id", "hash", "082", Guid.Empty, "Seturan", new GeoPoint(-7.7, 110.4), "AB-1234-XX");
+        driver.MarkVerified();
+        var vehicle = new Vehicle(driver.UserId, "AB 1234 XY", "Honda", "Jazz", "White", VehicleType.Car, 4);
+        driver.AddVehicle(vehicle);
+
+        User polymorphicDriver = driver;
+        Assert.False(passenger.CanPublishTrip());
+        Assert.True(polymorphicDriver.CanPublishTrip());
+    }
+
+    [Fact]
+    public void Encapsulation_DriverApproveRequest_DecrementsTripAvailableSeats()
+    {
+        var driver = new Driver("24/532894", "Calvin", "c@ugm.ac.id", "hash", "082", Guid.Empty, "Seturan", new GeoPoint(-7.7, 110.4), "AB-1234-XX");
+        driver.MarkVerified();
+        var vehicle = new Vehicle(driver.UserId, "AB 1234 XY", "Honda", "Jazz", "White", VehicleType.Car, 4);
+        driver.AddVehicle(vehicle);
+
+        var trip = driver.PublishNewTrip(vehicle.VehicleId, "Seturan", new GeoPoint(-7.7, 110.4), Guid.Empty, DateTime.Today.AddHours(7.5), 3, 5000m);
+        var req = new RideRequest(trip.TripId, Guid.NewGuid(), "Jakal Km 5", new GeoPoint(-7.75, 110.38), "Seat please");
+        trip.ReceiveRequest(req);
+
+        Assert.Equal(3, trip.AvailableSeats);
+        Assert.True(driver.ApproveRequest(req.RequestId));
+        Assert.Equal(2, trip.AvailableSeats);
+        Assert.Equal(RequestStatus.Approved, req.Status);
+    }
+
     [Fact]
     public void Departure_SubtractsMinutes()
     {
