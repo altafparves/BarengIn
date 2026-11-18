@@ -75,5 +75,15 @@ public class ScreenshotTests
         AppSession.Bio = "Commutes from Jakal every day. Happy to chat or ride in silence.";
         var profile = new ProfileWindow();
         Shot(profile, "05-profile");
+
+        string mod9Dir = Path.Combine(
+            Path.GetDirectoryName(Path.GetDirectoryName(OutputDir()))!,
+            "module-9",
+            "screenshots");
+        Directory.CreateDirectory(mod9Dir);
+        foreach (string file in Directory.GetFiles(OutputDir(), "*.png"))
+        {
+            File.Copy(file, Path.Combine(mod9Dir, Path.GetFileName(file)), overwrite: true);
+        }
     }
 }
