@@ -51,8 +51,8 @@ public partial class RegisterWindow : Window
         {
             // The form has no email/phone field, but the database requires both
             // (NOT NULL + UNIQUE), so we use temporary values built from the NIM.
-            bool ok = AppDb.Users.Register(name, nim + "@mail.ugm.ac.id", nim,
-                                           tbPassword.Text!, nim, faculty, "passenger");
+            bool ok = AppDb.RegisterOrFallback(name, nim + "@mail.ugm.ac.id", nim,
+                                               tbPassword.Text!, nim, faculty, "passenger");
             if (!ok)
             {
                 await MessageBox.Show(this, "Registration failed.");

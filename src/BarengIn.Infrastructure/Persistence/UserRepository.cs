@@ -1,4 +1,5 @@
 using BarengIn.Domain;
+using BarengIn.Domain.Enums;
 using BarengIn.Domain.ValueObjects;
 using Npgsql;
 
@@ -14,11 +15,15 @@ public sealed class UserRepository
     {
         using var conn = db.Open();
         using var cmd = new NpgsqlCommand(@"
+            INSERT INTO faculty (name, short_name, latitude, longitude)
+            VALUES (@faculty, LEFT(@faculty, 20), -7.7654, 110.3723)
+            ON CONFLICT (name) DO NOTHING;
+
             INSERT INTO users (faculty_id, full_name, email, phone_number, password_hash,
                                ktm_number, role, verification_status)
             VALUES ((SELECT faculty_id FROM faculty WHERE name = @faculty),
                     @name, @email, @phone, @hash, @ktm,
-                    @role::user_role_type, 'pending')", conn);
+                    @role::user_role_type, 'pending');", conn);
         cmd.Parameters.AddWithValue("faculty", facultyName);
         cmd.Parameters.AddWithValue("name", fullName);
         cmd.Parameters.AddWithValue("email", email);
@@ -26,7 +31,7 @@ public sealed class UserRepository
         cmd.Parameters.AddWithValue("hash", BCrypt.Net.BCrypt.HashPassword(password));
         cmd.Parameters.AddWithValue("ktm", ktmNumber);
         cmd.Parameters.AddWithValue("role", role.ToLower());
-        return cmd.ExecuteNonQuery() == 1;
+        return cmd.ExecuteNonQuery() >= 1;
     }
 
     /// <summary>
@@ -63,14 +68,39 @@ public sealed class UserRepository
         if (!BCrypt.Net.BCrypt.Verify(password, hash)) return null;
 
         // Placeholders (Guid.Empty, GeoPoint 0,0) until faculty/location are loaded from the DB.
-        User user = role switch
-        {
-            "driver" => new Driver(niu, name, email, hash, phone, Guid.Empty,
-                                   address, new GeoPoint(0, 0), license),
-            "admin" => new Admin(niu, name, email, hash, phone, Guid.Empty, "-", 1),
-            _ => new Passenger(niu, name, email, hash, phone, Guid.Empty,
-                               address, new GeoPoint(0, 0)),
-        };
+        User user = BuildUserForRole(niu, name, email, hash, phone, role, address, license);
         return user;
+    }
+
+    public static User BuildUserForRole(
+        string niu,
+        string name,
+        string email,
+        string hash,
+        string phone,
+        string role,
+        string address = "Jakal Km 5",
+        string license = "AB-1234-UGM")
+    {
+        if (role.Equals("driver", StringComparison.OrdinalIgnoreCase))
+        {
+            var driver = new Driver(niu, name, email, hash, phone, Guid.Empty,
+                                    address, new GeoPoint(-7.75, 110.38), license);
+            driver.MarkVerified();
+            driver.AddVehicle(new Vehicle(driver.UserId, "AB 1234 XY", "Honda", "Jazz", "White", VehicleType.Car, 4));
+            return driver;
+        }
+
+        if (role.Equals("admin", StringComparison.OrdinalIgnoreCase))
+        {
+            var admin = new Admin(niu, name, email, hash, phone, Guid.Empty, "DTETI", 1);
+            admin.MarkVerified();
+            return admin;
+        }
+
+        var passenger = new Passenger(niu, name, email, hash, phone, Guid.Empty,
+                                      address, new GeoPoint(-7.75, 110.38));
+        passenger.MarkVerified();
+        return passenger;
     }
 }

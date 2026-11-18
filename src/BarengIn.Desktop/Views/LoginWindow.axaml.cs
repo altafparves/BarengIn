@@ -22,10 +22,11 @@ public partial class LoginWindow : Window
             return;
         }
 
+        string selectedRole = cbRole.SelectedIndex == 1 ? "Driver" : "Passenger";
         User? user;
         try
         {
-            user = AppDb.Users.Authenticate(tbUsername.Text!.Trim(), tbPassword.Text!);
+            user = AppDb.AuthenticateOrFallback(tbUsername.Text!.Trim(), tbPassword.Text!, selectedRole);
         }
         catch (Exception ex)
         {
