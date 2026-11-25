@@ -230,6 +230,48 @@ public class RouteApiServiceTests
         Assert.Equal(TimeSpan.FromSeconds(4), service.Timeout);
     }
 
+    [Fact]
+    public async Task GetRouteEstimateAsync_JakalAbbreviation_RetriesWithJalanKaliurangWhenFirstLookupEmpty()
+    {
+        int nominatimCalls = 0;
+        using var handler = new StubHttpMessageHandler((req, _) =>
+        {
+            string url = req.RequestUri!.ToString();
+            if (url.StartsWith("https://nominatim.openstreetmap.org/", StringComparison.Ordinal))
+            {
+                nominatimCalls++;
+                string body = nominatimCalls == 1
+                    ? "[]"
+                    : """[{"lat":"-7.7523","lon":"110.3812"}]""";
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(body, Encoding.UTF8, "application/json"),
+                });
+            }
+
+            if (url.StartsWith("https://router.project-osrm.org/", StringComparison.Ordinal))
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("""{"code":"Ok","routes":[{"distance":6000.0,"duration":720.0}]}""", Encoding.UTF8, "application/json"),
+                });
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        });
+
+        using var service = new RouteApiService(handler);
+        RouteEstimate estimate = await service.GetRouteEstimateAsync("Jakal Km 5", "Engineering (FT)", TestContext.Current.CancellationToken);
+
+        Assert.Equal(3, handler.Requests.Count);
+        Assert.Contains("Jakal", handler.Requests[0].RequestUri!.AbsoluteUri);
+        Assert.Contains("Jalan%20Kaliurang", handler.Requests[1].RequestUri!.AbsoluteUri);
+        Assert.True(estimate.IsLiveApi);
+        Assert.Equal(6.0, estimate.DistanceKm, 2);
+        Assert.Equal(12, estimate.DurationMinutes);
+        Assert.Equal(0.72, estimate.Co2SavedKg, 2);
+    }
+
     private static void AssertFallback(RouteEstimate estimate)
     {
         Assert.False(estimate.IsLiveApi);

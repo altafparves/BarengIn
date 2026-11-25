@@ -1,7 +1,9 @@
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.Threading;
 using BarengIn.Desktop.Models;
 using BarengIn.Desktop.Views;
+using BarengIn.Infrastructure.Services;
 
 namespace BarengIn.Desktop.Tests;
 
@@ -323,5 +325,101 @@ public class ScreenBehaviorTests
             BarengIn.Desktop.AppDb.ConfigFilePath = prevPath;
             BarengIn.Desktop.AppDb.ResetAvailabilityCache();
         }
+    }
+
+    [AvaloniaFact]
+    public void Home_FindRides_ShowsCheckingRouteLoadingState_ThenLiveRouteSummary()
+    {
+        var prevEstimator = BarengIn.Desktop.AppDb.RouteEstimator;
+        var tcs = new TaskCompletionSource<RouteEstimate>();
+        HomeWindow? home = null;
+        try
+        {
+            BarengIn.Desktop.AppDb.RouteEstimator = (_, _, _) => tcs.Task;
+            home = NewHome();
+            home.Find<TextBox>("tbOrigin").Text = "Jakal Km 5";
+            home.Click("btnFind");
+
+            var rides = Assert.IsAssignableFrom<IEnumerable<RideRow>>(home.Find<ListBox>("lvRides").ItemsSource);
+            Assert.Equal(3, rides.Count());
+            Assert.Equal("Checking route...", home.Find<TextBlock>("lblRouteInfo").Text);
+
+            tcs.SetResult(new RouteEstimate(7.5, 16, 0.9, IsLiveApi: true, Source: "OSRM + Nominatim"));
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal(
+                "Route: ~7.5 km • ~16 min • 0.90 kg CO2 saved (OSRM + Nominatim)",
+                home.Find<TextBlock>("lblRouteInfo").Text);
+        }
+        finally
+        {
+            home?.Close();
+            BarengIn.Desktop.AppDb.RouteEstimator = prevEstimator;
+        }
+    }
+
+    [AvaloniaFact]
+    public void Driver_CheckRoute_And_PostTrip_DisplayRouteFallback_WithoutCrashing()
+    {
+        var prevEstimator = BarengIn.Desktop.AppDb.RouteEstimator;
+        DriverWindow? driverWindow = null;
+        try
+        {
+            BarengIn.Desktop.AppDb.RouteEstimator = (_, _, _) =>
+                Task.FromResult(RouteApiService.CreateFallbackEstimate());
+
+            driverWindow = NewDriver();
+            driverWindow.Find<TextBox>("tbOrigin").Text = "Seturan";
+            driverWindow.Click("btnCheckRoute");
+            Dispatcher.UIThread.RunJobs();
+
+            string expectedFallback = "Fallback: " + RouteApiService.CreateFallbackEstimate().SummaryText;
+            Assert.Equal(expectedFallback, driverWindow.Find<TextBlock>("lblRouteInfo").Text);
+
+            driverWindow.Click("btnPost");
+            Dispatcher.UIThread.RunJobs();
+
+            var trips = driverWindow.Find<ListBox>("lvTrips").ItemsSource!.Cast<TripRow>().ToList();
+            Assert.Contains(trips, t => t.Pickup == "Seturan");
+            Assert.Equal(expectedFallback, driverWindow.Find<TextBlock>("lblRouteInfo").Text);
+        }
+        finally
+        {
+            driverWindow?.Close();
+            BarengIn.Desktop.AppDb.RouteEstimator = prevEstimator;
+        }
+    }
+
+    [AvaloniaFact]
+    public void MainWindows_EnableCanResizeWithMinimumDimensions()
+    {
+        AppSession.Reset();
+        AppSession.SignIn("24/536741", "Driver");
+
+        var login = new LoginWindow();
+        var register = new RegisterWindow();
+        var profile = new ProfileWindow();
+        var home = new HomeWindow();
+        var driver = new DriverWindow();
+
+        Assert.True(login.CanResize);
+        Assert.Equal(340, login.MinWidth);
+        Assert.Equal(430, login.MinHeight);
+
+        Assert.True(register.CanResize);
+        Assert.Equal(380, register.MinWidth);
+        Assert.Equal(600, register.MinHeight);
+
+        Assert.True(profile.CanResize);
+        Assert.Equal(400, profile.MinWidth);
+        Assert.Equal(520, profile.MinHeight);
+
+        Assert.True(home.CanResize);
+        Assert.Equal(560, home.MinWidth);
+        Assert.Equal(480, home.MinHeight);
+
+        Assert.True(driver.CanResize);
+        Assert.Equal(840, driver.MinWidth);
+        Assert.Equal(560, driver.MinHeight);
     }
 }

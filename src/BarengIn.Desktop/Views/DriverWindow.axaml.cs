@@ -5,6 +5,7 @@ using BarengIn.Desktop.Logic;
 using BarengIn.Desktop.Models;
 using BarengIn.Domain;
 using BarengIn.Domain.ValueObjects;
+using BarengIn.Infrastructure.Services;
 
 namespace BarengIn.Desktop.Views;
 
@@ -12,6 +13,7 @@ public partial class DriverWindow : Window
 {
     private readonly ObservableCollection<TripRow> trips;
     private readonly Driver activeDriver;
+    private CancellationTokenSource? routeCts;
 
     public DriverWindow()
     {
@@ -39,6 +41,59 @@ public partial class DriverWindow : Window
         catch
         {
             // Keep offline session collections if database query fails.
+        }
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        routeCts?.Cancel();
+        routeCts?.Dispose();
+        routeCts = null;
+        base.OnClosed(e);
+    }
+
+    private async void btnCheckRoute_Click(object? sender, RoutedEventArgs e)
+    {
+        string origin = (tbOrigin.Text ?? "").Trim();
+        if (origin == "")
+        {
+            await MessageBox.Show(this, "Please enter your pickup area.");
+            return;
+        }
+
+        string faculty = cbFaculty.SelectedItem as string ?? Faculties.All[0];
+        await UpdateRoutePreviewAsync(origin, faculty);
+    }
+
+    private async Task UpdateRoutePreviewAsync(string origin, string faculty)
+    {
+        routeCts?.Cancel();
+        routeCts?.Dispose();
+        var cts = new CancellationTokenSource();
+        routeCts = cts;
+
+        lblRouteInfo.Text = "Checking route...";
+        try
+        {
+            RouteEstimate estimate = await AppDb.RouteEstimator(origin, faculty, cts.Token);
+            if (cts.IsCancellationRequested || !ReferenceEquals(routeCts, cts))
+            {
+                return;
+            }
+
+            string prefix = estimate.IsLiveApi ? "Route: " : "Fallback: ";
+            lblRouteInfo.Text = prefix + estimate.SummaryText;
+        }
+        catch (OperationCanceledException)
+        {
+            // Superseded by a newer check or window closure.
+        }
+        catch
+        {
+            if (!cts.IsCancellationRequested && ReferenceEquals(routeCts, cts))
+            {
+                lblRouteInfo.Text = "Fallback: " + RouteApiService.CreateFallbackEstimate().SummaryText;
+            }
         }
     }
 
@@ -152,6 +207,7 @@ public partial class DriverWindow : Window
                 trip.TripId));
         }
         tbOrigin.Text = "";
+        await UpdateRoutePreviewAsync(origin, faculty);
     }
 
     private void btnApprove_Click(object? sender, RoutedEventArgs e)

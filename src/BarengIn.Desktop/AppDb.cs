@@ -1,6 +1,7 @@
 using System.Text.Json;
 using BarengIn.Domain;
 using BarengIn.Infrastructure.Persistence;
+using BarengIn.Infrastructure.Services;
 using Npgsql;
 
 namespace BarengIn.Desktop;
@@ -77,6 +78,18 @@ public static class AppDb
     public static UserRepository Users => new UserRepository(new Database(ConnectionString));
 
     public static RideRepository Rides => new RideRepository(new Database(ConnectionString));
+
+    public static Func<string, string, CancellationToken, Task<RouteEstimate>> RouteEstimator { get; set; } =
+        EstimateRouteWithDefaultServiceAsync;
+
+    private static async Task<RouteEstimate> EstimateRouteWithDefaultServiceAsync(
+        string pickupArea,
+        string facultyName,
+        CancellationToken ct)
+    {
+        using var service = new RouteApiService();
+        return await service.GetRouteEstimateAsync(pickupArea, facultyName, ct);
+    }
 
     public static User? AuthenticateOrFallback(string nim, string password, string selectedRole) =>
         AuthenticateOrFallback(nim, password, selectedRole, out _, out _, out _);

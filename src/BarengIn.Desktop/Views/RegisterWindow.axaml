@@ -3,7 +3,8 @@
         x:Class="BarengIn.Desktop.Views.RegisterWindow"
         Title="BarengIn - Create Account"
         Width="400" Height="640"
-        CanResize="False"
+        MinWidth="380" MinHeight="600"
+        CanResize="True"
         WindowStartupLocation="CenterScreen"
         Background="White">
 

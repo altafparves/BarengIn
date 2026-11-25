@@ -3,7 +3,8 @@
         x:Class="BarengIn.Desktop.Views.ProfileWindow"
         Title="BarengIn - Profile"
         Width="420" Height="560"
-        CanResize="False"
+        MinWidth="400" MinHeight="520"
+        CanResize="True"
         WindowStartupLocation="CenterScreen"
         Background="White">
 
