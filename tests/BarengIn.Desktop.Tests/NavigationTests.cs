@@ -5,6 +5,7 @@ using BarengIn.Desktop.Views;
 
 namespace BarengIn.Desktop.Tests;
 
+[Collection("AppDbSerial")]
 public class NavigationTests
 {
     private static LoginWindow NewLogin()

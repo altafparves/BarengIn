@@ -5,6 +5,7 @@ using BarengIn.Domain.ValueObjects;
 
 namespace BarengIn.Desktop.Tests;
 
+[Collection("AppDbSerial")]
 public class LogicTests
 {
     [Fact]
@@ -85,6 +86,146 @@ public class LogicTests
         {
             Environment.SetEnvironmentVariable("BARENGIN_DB", prev);
             BarengIn.Desktop.AppDb.ResetAvailabilityCache();
+        }
+    }
+
+    [Fact]
+    public void AppDb_ConfigPriority_EnvOverridesAppSettings_AndPasswordHereFallsBackOffline()
+    {
+        string? prevEnv = Environment.GetEnvironmentVariable("BARENGIN_DB");
+        string? prevPath = BarengIn.Desktop.AppDb.ConfigFilePath;
+        string tempFile = Path.Combine(Path.GetTempPath(), $"barengin-appsettings-{Guid.NewGuid():N}.json");
+
+        try
+        {
+            Environment.SetEnvironmentVariable("BARENGIN_DB", null);
+            BarengIn.Desktop.AppDb.ConfigFilePath = tempFile;
+
+            // 1. Default template with PASSWORDHERE -> reads file, but IsDatabaseConfigured is false (offline fallback).
+            File.WriteAllText(tempFile, """
+            {
+              "ConnectionStrings": {
+                "Default": "Host=localhost;Port=5432;Database=barengin;Username=postgres;Password=PASSWORDHERE"
+              }
+            }
+            """);
+            BarengIn.Desktop.AppDb.ResetAvailabilityCache();
+            Assert.Contains("PASSWORDHERE", BarengIn.Desktop.AppDb.ConnectionString);
+            Assert.False(BarengIn.Desktop.AppDb.IsDatabaseConfigured);
+            Assert.False(BarengIn.Desktop.AppDb.IsAvailable);
+
+            // 2. Configured appsettings.json without BARENGIN_DB -> reads ConnectionStrings:Default and marks configured.
+            const string configuredCs = "Host=127.0.0.1;Port=54329;Database=barengin_cfg;Username=postgres;Password=realpass";
+            File.WriteAllText(tempFile, $$"""
+            {
+              "ConnectionStrings": {
+                "Default": "{{configuredCs}}"
+              }
+            }
+            """);
+            BarengIn.Desktop.AppDb.ResetAvailabilityCache();
+            Assert.Equal(configuredCs, BarengIn.Desktop.AppDb.ConnectionString);
+            Assert.True(BarengIn.Desktop.AppDb.IsDatabaseConfigured);
+            Assert.False(BarengIn.Desktop.AppDb.IsAvailable); // Port 54329 is unreachable -> clean offline fallback
+
+            // 3. BARENGIN_DB env var takes highest priority over appsettings.json.
+            const string envCs = "Host=127.0.0.1;Port=54328;Database=barengin_env;Username=postgres;Password=envpass";
+            Environment.SetEnvironmentVariable("BARENGIN_DB", envCs);
+            BarengIn.Desktop.AppDb.ResetAvailabilityCache();
+            Assert.Equal(envCs, BarengIn.Desktop.AppDb.ConnectionString);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("BARENGIN_DB", prevEnv);
+            BarengIn.Desktop.AppDb.ConfigFilePath = prevPath;
+            BarengIn.Desktop.AppDb.ResetAvailabilityCache();
+            if (File.Exists(tempFile))
+            {
+                File.Delete(tempFile);
+            }
+        }
+    }
+
+    [Fact]
+    public void AppSettings_IsCopiedToOutputDirectory()
+    {
+        string outputConfig = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
+        Assert.True(File.Exists(outputConfig), $"Expected appsettings.json in {AppContext.BaseDirectory}");
+        string? cs = BarengIn.Desktop.AppDb.TryLoadConnectionStringFromAppSettings(outputConfig);
+        Assert.False(string.IsNullOrWhiteSpace(cs));
+    }
+
+    [Fact]
+    public void AppDb_MalformedOrMissingAppSettings_AndWhitespaceEnv_FallBackCleanly()
+    {
+        string? prevEnv = Environment.GetEnvironmentVariable("BARENGIN_DB");
+        string? prevPath = BarengIn.Desktop.AppDb.ConfigFilePath;
+        string tempFile = Path.Combine(Path.GetTempPath(), $"barengin-edge-{Guid.NewGuid():N}.json");
+        string missingFile = Path.Combine(Path.GetTempPath(), $"barengin-missing-{Guid.NewGuid():N}.json");
+
+        try
+        {
+            // 1. Whitespace-only BARENGIN_DB falls back to appsettings.json.
+            const string configuredCs = "Host=127.0.0.1;Port=54329;Database=barengin_ws;Username=postgres;Password=realpass";
+            File.WriteAllText(tempFile, $$"""
+            {
+              "ConnectionStrings": {
+                "Default": "{{configuredCs}}"
+              }
+            }
+            """);
+            Environment.SetEnvironmentVariable("BARENGIN_DB", "   ");
+            BarengIn.Desktop.AppDb.ConfigFilePath = tempFile;
+            BarengIn.Desktop.AppDb.ResetAvailabilityCache();
+            Assert.Equal(configuredCs, BarengIn.Desktop.AppDb.ConnectionString);
+            Assert.True(BarengIn.Desktop.AppDb.IsDatabaseConfigured);
+
+            // Clear BARENGIN_DB for remaining config file edge-case checks.
+            Environment.SetEnvironmentVariable("BARENGIN_DB", null);
+
+            // 2. Malformed JSON falls back cleanly to DefaultConnectionString without throwing.
+            File.WriteAllText(tempFile, "{ invalid json");
+            BarengIn.Desktop.AppDb.ResetAvailabilityCache();
+            Assert.Contains("PASSWORDHERE", BarengIn.Desktop.AppDb.ConnectionString);
+            Assert.False(BarengIn.Desktop.AppDb.IsDatabaseConfigured);
+            Assert.False(BarengIn.Desktop.AppDb.IsAvailable);
+
+            // 3. Missing appsettings.json path falls back cleanly.
+            BarengIn.Desktop.AppDb.ConfigFilePath = missingFile;
+            BarengIn.Desktop.AppDb.ResetAvailabilityCache();
+            Assert.Contains("PASSWORDHERE", BarengIn.Desktop.AppDb.ConnectionString);
+            Assert.False(BarengIn.Desktop.AppDb.IsDatabaseConfigured);
+            Assert.False(BarengIn.Desktop.AppDb.IsAvailable);
+
+            // 4. JSON with comments and trailing comma parses ConnectionStrings:Default cleanly.
+            const string commentedCs = "Host=127.0.0.1;Port=54329;Database=barengin_jsonc;Username=postgres;Password=jsoncpass";
+            File.WriteAllText(tempFile, $$"""
+            {
+              // Local database configuration
+              "ConnectionStrings": {
+                "Default": "{{commentedCs}}",
+              },
+            }
+            """);
+            BarengIn.Desktop.AppDb.ConfigFilePath = tempFile;
+            BarengIn.Desktop.AppDb.ResetAvailabilityCache();
+            Assert.Equal(commentedCs, BarengIn.Desktop.AppDb.ConnectionString);
+            Assert.True(BarengIn.Desktop.AppDb.IsDatabaseConfigured);
+            Assert.False(BarengIn.Desktop.AppDb.IsAvailable);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("BARENGIN_DB", prevEnv);
+            BarengIn.Desktop.AppDb.ConfigFilePath = prevPath;
+            BarengIn.Desktop.AppDb.ResetAvailabilityCache();
+            if (File.Exists(tempFile))
+            {
+                File.Delete(tempFile);
+            }
+            if (File.Exists(missingFile))
+            {
+                File.Delete(missingFile);
+            }
         }
     }
 
