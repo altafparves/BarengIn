@@ -3,12 +3,13 @@
         xmlns:m="using:BarengIn.Desktop.Models"
         x:Class="BarengIn.Desktop.Views.HomeWindow"
         Title="BarengIn - Find a Ride"
-        Width="580" Height="500"
-        CanResize="False"
+        Width="620" Height="540"
+        MinWidth="560" MinHeight="480"
+        CanResize="True"
         WindowStartupLocation="CenterScreen"
         Background="White">
 
-    <Grid Margin="20" RowDefinitions="Auto,16,Auto,16,*,12,Auto">
+    <Grid Margin="20" RowDefinitions="Auto,16,Auto,10,Auto,12,*,12,Auto">
         <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
             <TextBlock x:Name="lblWelcome" Classes="heading" VerticalAlignment="Center" />
             <Button x:Name="btnProfile" Grid.Column="1" Classes="secondary" Content="Profile"
@@ -31,7 +32,13 @@
                     Height="45" Click="btnFind_Click" />
         </Grid>
 
-        <Border Grid.Row="4" BorderBrush="#D0D0D0" BorderThickness="1">
+        <Border Grid.Row="4" Background="#F7FAF8" BorderBrush="#D7E6DD" BorderThickness="1"
+                CornerRadius="4" Padding="10,6">
+            <TextBlock x:Name="lblRouteInfo" Classes="muted" TextWrapping="Wrap" FontSize="12"
+                       Text="Enter your pickup area and click Find Rides to preview route distance, ETA, and CO2 saved." />
+        </Border>
+
+        <Border Grid.Row="6" BorderBrush="#D0D0D0" BorderThickness="1">
             <Grid RowDefinitions="Auto,*">
                 <Grid Background="#F3F3F3" Margin="0" ColumnDefinitions="130,160,80,60,*" Height="30">
                     <TextBlock Grid.Column="0" Text="Driver" FontWeight="SemiBold" VerticalAlignment="Center" Margin="12,0" />
@@ -56,7 +63,7 @@
             </Grid>
         </Border>
 
-        <Grid Grid.Row="6" ColumnDefinitions="150,16,*,Auto">
+        <Grid Grid.Row="8" ColumnDefinitions="150,16,*,Auto">
             <Button x:Name="btnRequest" Grid.Column="0" Classes="primary" Content="Request Ride"
                     HorizontalAlignment="Stretch" Height="40" Click="btnRequest_Click" />
             <TextBlock x:Name="lblCo2" Grid.Column="2" Classes="label" />

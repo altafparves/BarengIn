@@ -4,11 +4,14 @@ using BarengIn.Desktop.Logic;
 using BarengIn.Desktop.Models;
 using BarengIn.Domain;
 using BarengIn.Domain.ValueObjects;
+using BarengIn.Infrastructure.Services;
 
 namespace BarengIn.Desktop.Views;
 
 public partial class HomeWindow : Window
 {
+    private CancellationTokenSource? routeCts;
+
     public HomeWindow()
     {
         InitializeComponent();
@@ -18,6 +21,14 @@ public partial class HomeWindow : Window
         UpdateCo2Label();
     }
 
+    protected override void OnClosed(EventArgs e)
+    {
+        routeCts?.Cancel();
+        routeCts?.Dispose();
+        routeCts = null;
+        base.OnClosed(e);
+    }
+
     private void UpdateCo2Label()
     {
         lblCo2.Text = Display.Co2(AppSession.Co2Saved);
@@ -25,13 +36,15 @@ public partial class HomeWindow : Window
 
     private async void btnFind_Click(object? sender, RoutedEventArgs e)
     {
-        if ((tbOrigin.Text ?? "").Trim() == "")
+        string origin = (tbOrigin.Text ?? "").Trim();
+        if (origin == "")
         {
             await MessageBox.Show(this, "Please enter your pickup area.");
             return;
         }
 
         string faculty = cbFaculty.SelectedItem as string ?? Faculties.All[0];
+        bool populatedFromDb = false;
         if (AppDb.IsAvailable)
         {
             var dbRides = AppDb.Rides.FindRides(faculty)
@@ -40,11 +53,48 @@ public partial class HomeWindow : Window
             if (dbRides.Count > 0)
             {
                 lvRides.ItemsSource = dbRides;
-                return;
+                populatedFromDb = true;
             }
         }
 
-        lvRides.ItemsSource = RideLogic.Find(faculty, dtpTime.SelectedTime ?? TimeSpan.Zero);
+        if (!populatedFromDb)
+        {
+            lvRides.ItemsSource = RideLogic.Find(faculty, dtpTime.SelectedTime ?? TimeSpan.Zero);
+        }
+
+        await UpdateRoutePreviewAsync(origin, faculty);
+    }
+
+    private async Task UpdateRoutePreviewAsync(string origin, string faculty)
+    {
+        routeCts?.Cancel();
+        routeCts?.Dispose();
+        var cts = new CancellationTokenSource();
+        routeCts = cts;
+
+        lblRouteInfo.Text = "Checking route...";
+        try
+        {
+            RouteEstimate estimate = await AppDb.RouteEstimator(origin, faculty, cts.Token);
+            if (cts.IsCancellationRequested || !ReferenceEquals(routeCts, cts))
+            {
+                return;
+            }
+
+            string prefix = estimate.IsLiveApi ? "Route: " : "Fallback: ";
+            lblRouteInfo.Text = prefix + estimate.SummaryText;
+        }
+        catch (OperationCanceledException)
+        {
+            // Superseded by a newer search or window closure.
+        }
+        catch
+        {
+            if (!cts.IsCancellationRequested && ReferenceEquals(routeCts, cts))
+            {
+                lblRouteInfo.Text = "Fallback: " + RouteApiService.CreateFallbackEstimate().SummaryText;
+            }
+        }
     }
 
     private async void btnRequest_Click(object? sender, RoutedEventArgs e)

@@ -3,7 +3,8 @@
         x:Class="BarengIn.Desktop.Views.LoginWindow"
         Title="BarengIn - Login"
         Width="360" Height="450"
-        CanResize="False"
+        MinWidth="340" MinHeight="430"
+        CanResize="True"
         WindowStartupLocation="CenterScreen"
         Background="White">
 

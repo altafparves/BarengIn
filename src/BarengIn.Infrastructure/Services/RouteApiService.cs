@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace BarengIn.Infrastructure.Services;
 
@@ -22,6 +23,7 @@ public sealed class RouteApiService : IDisposable
     public const string DefaultUserAgent = "BarengIn-UGM-Carpool/1.0 (https://github.com/altafparvesh/BarengIn)";
 
     private static readonly (double Lat, double Lon) BulaksumurFallback = (-7.7702, 110.3775);
+    private static readonly Regex JakalWordRegex = new(@"\bJakal\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private static readonly Dictionary<string, (double Lat, double Lon)> FacultyCoordinates =
         new(StringComparer.OrdinalIgnoreCase)
@@ -80,20 +82,13 @@ public sealed class RouteApiService : IDisposable
         try
         {
             string trimmedPickup = pickupArea.Trim();
-            string queryText = trimmedPickup.Contains("Yogyakarta", StringComparison.OrdinalIgnoreCase)
-                ? trimmedPickup
-                : $"{trimmedPickup}, Yogyakarta, Indonesia";
-            string nominatimUrl =
-                $"https://nominatim.openstreetmap.org/search?format=json&limit=1&q={Uri.EscapeDataString(queryText)}";
-
-            using HttpResponseMessage nomResp = await _httpClient.GetAsync(nominatimUrl, ct).ConfigureAwait(false);
-            if (!nomResp.IsSuccessStatusCode)
+            (double Lat, double Lon)? pickupCoords = await TryGeocodeAsync(trimmedPickup, ct).ConfigureAwait(false);
+            if (pickupCoords is null && JakalWordRegex.IsMatch(trimmedPickup))
             {
-                return CreateFallbackEstimate();
+                string expandedPickup = JakalWordRegex.Replace(trimmedPickup, "Jalan Kaliurang");
+                pickupCoords = await TryGeocodeAsync(expandedPickup, ct).ConfigureAwait(false);
             }
 
-            string nomJson = await nomResp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
-            (double Lat, double Lon)? pickupCoords = ParseNominatimResponse(nomJson);
             if (pickupCoords is null)
             {
                 return CreateFallbackEstimate();
@@ -239,6 +234,24 @@ public sealed class RouteApiService : IDisposable
         {
             _httpClient.Dispose();
         }
+    }
+
+    private async Task<(double Lat, double Lon)?> TryGeocodeAsync(string pickupQuery, CancellationToken ct)
+    {
+        string queryText = pickupQuery.Contains("Yogyakarta", StringComparison.OrdinalIgnoreCase)
+            ? pickupQuery
+            : $"{pickupQuery}, Yogyakarta, Indonesia";
+        string nominatimUrl =
+            $"https://nominatim.openstreetmap.org/search?format=json&limit=1&q={Uri.EscapeDataString(queryText)}";
+
+        using HttpResponseMessage nomResp = await _httpClient.GetAsync(nominatimUrl, ct).ConfigureAwait(false);
+        if (!nomResp.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        string nomJson = await nomResp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+        return ParseNominatimResponse(nomJson);
     }
 
     private static HttpClient CreateDefaultClient(HttpClient client)
