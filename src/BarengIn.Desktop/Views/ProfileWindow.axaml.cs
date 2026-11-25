@@ -36,6 +36,18 @@ public partial class ProfileWindow : Window
         string safePhone = string.IsNullOrWhiteSpace(AppSession.Nim) ? "08123456789" : AppSession.Nim;
         AppSession.CurrentUser?.UpdateProfile(safeName, safePhone, AppSession.Bio);
 
+        if (AppDb.IsAvailable && !string.IsNullOrWhiteSpace(AppSession.Nim))
+        {
+            try
+            {
+                AppDb.Users.UpdateProfile(AppSession.Nim, AppSession.Faculty, AppSession.Hobbies, AppSession.Bio);
+            }
+            catch
+            {
+                // Keep updated in-memory session state if DB update fails.
+            }
+        }
+
         await MessageBox.Show(this, "Profile saved.");
     }
 

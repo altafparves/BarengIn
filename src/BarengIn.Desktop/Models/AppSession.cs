@@ -23,10 +23,22 @@ public static class AppSession
 
     public static void SignIn(User user)
     {
+        SignIn(user, null, null, user.Bio);
+    }
+
+    public static void SignIn(User user, string? faculty, string? hobbies, string? bio)
+    {
         CurrentUser = user;
         Nim = user.Niu.Trim();
         Role = user.GetRoleName();
         Name = string.IsNullOrWhiteSpace(user.FullName) ? Nim : user.FullName;
+        if (!string.IsNullOrWhiteSpace(faculty))
+        {
+            Faculty = faculty.Trim();
+        }
+
+        Hobbies = (hobbies ?? string.Empty).Trim();
+        Bio = bio is not null ? bio.Trim() : user.Bio;
         VerificationStatus = user.IsVerified() ? "Verified" : "Pending";
         InitializeDriverStateIfNeeded();
     }

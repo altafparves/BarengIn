@@ -78,11 +78,24 @@ public static class AppDb
 
     public static RideRepository Rides => new RideRepository(new Database(ConnectionString));
 
-    public static User? AuthenticateOrFallback(string nim, string password, string selectedRole)
+    public static User? AuthenticateOrFallback(string nim, string password, string selectedRole) =>
+        AuthenticateOrFallback(nim, password, selectedRole, out _, out _, out _);
+
+    public static User? AuthenticateOrFallback(
+        string nim,
+        string password,
+        string selectedRole,
+        out string facultyName,
+        out string hobbies,
+        out string bio)
     {
+        facultyName = string.Empty;
+        hobbies = string.Empty;
+        bio = string.Empty;
+
         if (IsAvailable)
         {
-            return Users.Authenticate(nim, password);
+            return Users.Authenticate(nim, password, out facultyName, out hobbies, out bio);
         }
 
         return UserRepository.BuildUserForRole(

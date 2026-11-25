@@ -31,6 +31,67 @@ public partial class DriverWindow : Window
         trips = AppSession.DriverTrips;
         lvTrips.ItemsSource = trips;
         lvRequests.ItemsSource = AppSession.DriverRequests;
+
+        try
+        {
+            RefreshFromDatabase();
+        }
+        catch
+        {
+            // Keep offline session collections if database query fails.
+        }
+    }
+
+    public void RefreshFromDatabase()
+    {
+        if (!AppDb.IsAvailable || string.IsNullOrWhiteSpace(AppSession.Nim))
+        {
+            return;
+        }
+
+        var dbTrips = AppDb.Rides.GetDriverRides(AppSession.Nim);
+        trips.Clear();
+        foreach (var r in dbTrips)
+        {
+            trips.Add(new TripRow(
+                r.Origin,
+                r.Faculty,
+                r.Departs,
+                r.Seats,
+                Display.Rupiah((int)r.Cost),
+                dbRideId: r.RideId));
+        }
+
+        var dbRequests = AppDb.Rides.GetIncomingRequests(AppSession.Nim);
+        AppSession.DriverRequests.Clear();
+        foreach (var req in dbRequests)
+        {
+            string uiStatus = req.Status.ToLowerInvariant() switch
+            {
+                "accepted" => "Approved",
+                "rejected" => "Rejected",
+                _ => "Pending",
+            };
+            AppSession.DriverRequests.Add(new RequestItem(
+                req.PassengerName,
+                req.PickupAddress,
+                req.Faculty,
+                dbRequestId: req.RequestId,
+                dbRideId: req.RideId,
+                initialStatus: uiStatus));
+        }
+    }
+
+    private void btnRefresh_Click(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            RefreshFromDatabase();
+        }
+        catch
+        {
+            // Keep current list items if DB refresh fails.
+        }
     }
 
     private async void btnPost_Click(object? sender, RoutedEventArgs e)
@@ -64,45 +125,76 @@ public partial class DriverWindow : Window
             seats,
             cost);
 
+        bool refreshedFromDb = false;
         if (AppDb.IsAvailable)
         {
-            AppDb.Rides.EnsureSeedData(Faculties.All);
-            AppDb.Rides.InsertRide(AppSession.Nim, origin, faculty, DateTime.Today.Add(time), seats, cost);
+            try
+            {
+                AppDb.Rides.EnsureSeedData(Faculties.All);
+                AppDb.Rides.InsertRide(AppSession.Nim, origin, faculty, DateTime.Today.Add(time), seats, cost);
+                RefreshFromDatabase();
+                refreshedFromDb = true;
+            }
+            catch
+            {
+                refreshedFromDb = false;
+            }
         }
 
-        trips.Add(new TripRow(
-            trip.OriginAddress,
-            faculty,
-            time.ToString(@"hh\:mm"),
-            trip.AvailableSeats,
-            Display.Rupiah(cost),
-            trip.TripId));
+        if (!refreshedFromDb)
+        {
+            trips.Add(new TripRow(
+                trip.OriginAddress,
+                faculty,
+                time.ToString(@"hh\:mm"),
+                trip.AvailableSeats,
+                Display.Rupiah(cost),
+                trip.TripId));
+        }
         tbOrigin.Text = "";
     }
 
     private void btnApprove_Click(object? sender, RoutedEventArgs e)
     {
-        if (((Button)sender!).DataContext is RequestItem item)
+        if (((Button)sender!).DataContext is not RequestItem item)
         {
-            // Domain Encapsulation: Driver.ApproveRequest approves the RideRequest and decrements Trip.AvailableSeats.
-            if (activeDriver.ApproveRequest(item.RequestId))
-            {
-                item.Status = "Approved";
+            return;
+        }
 
-                // Sync the decremented seat count to the visible TripRow in lvTrips.
-                var targetRow = trips.FirstOrDefault();
-                if (targetRow is not null)
+        if (AppDb.IsAvailable && item.DbRequestId > 0)
+        {
+            try
+            {
+                if (AppDb.Rides.ApproveRequest(item.DbRequestId))
                 {
-                    var targetTrip = activeDriver.PublishedTrips.FirstOrDefault(t => t.TripId == targetRow.TripId);
-                    if (targetTrip is not null && targetTrip != AppSession.SeededDriverTrip)
-                    {
-                        targetTrip.AddPassenger(Guid.NewGuid());
-                        targetRow.Seats = targetTrip.AvailableSeats;
-                    }
-                    else if (AppSession.SeededDriverTrip is not null)
-                    {
-                        targetRow.Seats = AppSession.SeededDriverTrip.AvailableSeats;
-                    }
+                    RefreshFromDatabase();
+                }
+            }
+            catch
+            {
+                // Ignore transient DB errors cleanly.
+            }
+            return;
+        }
+
+        // Domain Encapsulation: Driver.ApproveRequest approves the RideRequest and decrements Trip.AvailableSeats.
+        if (activeDriver.ApproveRequest(item.RequestId))
+        {
+            item.Status = "Approved";
+
+            // Sync the decremented seat count to the visible TripRow in lvTrips.
+            var targetRow = trips.FirstOrDefault();
+            if (targetRow is not null)
+            {
+                var targetTrip = activeDriver.PublishedTrips.FirstOrDefault(t => t.TripId == targetRow.TripId);
+                if (targetTrip is not null && targetTrip != AppSession.SeededDriverTrip)
+                {
+                    targetTrip.AddPassenger(Guid.NewGuid());
+                    targetRow.Seats = targetTrip.AvailableSeats;
+                }
+                else if (AppSession.SeededDriverTrip is not null)
+                {
+                    targetRow.Seats = AppSession.SeededDriverTrip.AvailableSeats;
                 }
             }
         }
@@ -110,13 +202,31 @@ public partial class DriverWindow : Window
 
     private void btnReject_Click(object? sender, RoutedEventArgs e)
     {
-        if (((Button)sender!).DataContext is RequestItem item)
+        if (((Button)sender!).DataContext is not RequestItem item)
         {
-            // Domain Encapsulation: Driver.RejectRequest transitions RideRequest status to Rejected.
-            if (activeDriver.RejectRequest(item.RequestId, "Declined by driver"))
+            return;
+        }
+
+        if (AppDb.IsAvailable && item.DbRequestId > 0)
+        {
+            try
             {
-                item.Status = "Rejected";
+                if (AppDb.Rides.RejectRequest(item.DbRequestId))
+                {
+                    RefreshFromDatabase();
+                }
             }
+            catch
+            {
+                // Ignore transient DB errors cleanly.
+            }
+            return;
+        }
+
+        // Domain Encapsulation: Driver.RejectRequest transitions RideRequest status to Rejected.
+        if (activeDriver.RejectRequest(item.RequestId, "Declined by driver"))
+        {
+            item.Status = "Rejected";
         }
     }
 
