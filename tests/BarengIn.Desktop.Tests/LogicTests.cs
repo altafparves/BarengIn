@@ -229,6 +229,132 @@ public class LogicTests
         }
     }
 
+    [Theory]
+    [InlineData("approved", "accepted")]
+    [InlineData(" Approved ", "accepted")]
+    [InlineData("ACCEPTED", "accepted")]
+    [InlineData(" rejected ", "rejected")]
+    [InlineData("Pending", "pending")]
+    [InlineData("CANCELLED", "cancelled")]
+    [InlineData(null, "")]
+    [InlineData("   ", "")]
+    [InlineData("unknown", "unknown")]
+    public void RideRepository_MapRequestStatus_NormalizesKnownStatuses(string? input, string expected)
+    {
+        Assert.Equal(expected, BarengIn.Infrastructure.Persistence.RideRepository.MapRequestStatus(input));
+    }
+
+    [Fact]
+    public void RideRepository_GetDriverRides_GetIncomingRequests_AndApproveRequest_AtomicallyDecrementsSeats_AndPreventsOverbooking()
+    {
+        string cs = Environment.GetEnvironmentVariable("BARENGIN_TEST_DB")
+            ?? $"Host=localhost;Port=5432;Database=barengin;Username={Environment.UserName};Timeout=1";
+
+        try
+        {
+            using var probe = new Npgsql.NpgsqlConnection(cs);
+            probe.Open();
+        }
+        catch
+        {
+            Assert.Skip("Local PostgreSQL is not running; skipping live RideRepository DB test.");
+            return;
+        }
+
+        string? prevEnv = Environment.GetEnvironmentVariable("BARENGIN_DB");
+        string? prevPath = BarengIn.Desktop.AppDb.ConfigFilePath;
+        string tempConfig = Path.Combine(Path.GetTempPath(), $"barengin-live-{Guid.NewGuid():N}.json");
+        string suffix = Guid.NewGuid().ToString("N")[..6];
+        string driverNim = $"DRV/{suffix}";
+        string pax1Nim = $"PX1/{suffix}";
+        string pax2Nim = $"PX2/{suffix}";
+
+        try
+        {
+            // Also verify M10-01 end-to-end: unset BARENGIN_DB, load valid local PostgreSQL credentials from appsettings.json.
+            Environment.SetEnvironmentVariable("BARENGIN_DB", null);
+            File.WriteAllText(tempConfig, $$"""
+            {
+              "ConnectionStrings": {
+                "Default": "{{cs}}"
+              }
+            }
+            """);
+            BarengIn.Desktop.AppDb.ConfigFilePath = tempConfig;
+            BarengIn.Desktop.AppDb.ResetAvailabilityCache();
+
+            Assert.True(BarengIn.Desktop.AppDb.IsAvailable);
+
+            var users = BarengIn.Desktop.AppDb.Users;
+            var rides = BarengIn.Desktop.AppDb.Rides;
+            rides.EnsureSeedData(BarengIn.Desktop.Models.Faculties.All);
+
+            Assert.True(users.Register("Calvin Driver", $"drv.{suffix}@ugm.ac.id", $"081{suffix}", "pw123", driverNim, "Engineering (FT)", "Driver"));
+            Assert.True(users.Register("Rani Passenger", $"px1.{suffix}@ugm.ac.id", $"082{suffix}", "pw123", pax1Nim, "MIPA", "Passenger"));
+            Assert.True(users.Register("Budi Passenger", $"px2.{suffix}@ugm.ac.id", $"083{suffix}", "pw123", pax2Nim, "Medicine", "Passenger"));
+
+            // Insert 1 driver ride with 1 seat to test both normal decrement and overbooking protection.
+            int rideId = rides.InsertRide(driverNim, "Seturan", "Engineering (FT)", DateTime.Today.AddHours(8), 1, 5000m);
+            Assert.True(rideId > 0);
+
+            var driverRides = rides.GetDriverRides(driverNim);
+            var targetRide = Assert.Single(driverRides, r => r.RideId == rideId);
+            Assert.Equal("Seturan", targetRide.Origin);
+            Assert.Equal("Engineering (FT)", targetRide.Faculty);
+            Assert.Equal(1, targetRide.Seats);
+
+            int req1Id = rides.InsertRequest(rideId, pax1Nim, "Jakal Km 5");
+            int req2Id = rides.InsertRequest(rideId, pax2Nim, "Condongcatur");
+            Assert.True(req1Id > 0);
+            Assert.True(req2Id > 0);
+
+            var incoming = rides.GetIncomingRequests(driverNim);
+            Assert.Contains(incoming, r => r.RequestId == req1Id && r.PassengerName == "Rani Passenger" && r.Faculty == "MIPA" && r.PickupAddress == "Jakal Km 5" && r.Status == "pending");
+            Assert.Contains(incoming, r => r.RequestId == req2Id && r.PassengerName == "Budi Passenger" && r.Faculty == "Medicine" && r.PickupAddress == "Condongcatur" && r.Status == "pending");
+
+            // Approve first request -> status becomes 'accepted' and available_seats decrements from 1 to 0.
+            Assert.True(rides.ApproveRequest(req1Id));
+
+            var updatedRide = Assert.Single(rides.GetDriverRides(driverNim), r => r.RideId == rideId);
+            Assert.Equal(0, updatedRide.Seats);
+
+            var incomingAfterFirst = rides.GetIncomingRequests(driverNim);
+            Assert.Contains(incomingAfterFirst, r => r.RequestId == req1Id && r.Status == "accepted");
+
+            // Double-approve idempotency check: approving the same request twice returns false and decrements seats only once.
+            Assert.False(rides.ApproveRequest(req1Id));
+            Assert.Equal(0, Assert.Single(rides.GetDriverRides(driverNim), r => r.RideId == rideId).Seats);
+
+            // Rejecting an already-accepted request must return false and leave status 'accepted'.
+            Assert.False(rides.RejectRequest(req1Id));
+            Assert.Contains(rides.GetIncomingRequests(driverNim), r => r.RequestId == req1Id && r.Status == "accepted");
+
+            // Approving second request when available_seats == 0 must fail (prevent overbooking) and keep status 'pending'.
+            Assert.False(rides.ApproveRequest(req2Id));
+            var incomingAfterOverbookAttempt = rides.GetIncomingRequests(driverNim);
+            Assert.Contains(incomingAfterOverbookAttempt, r => r.RequestId == req2Id && r.Status == "pending");
+
+            // Rejecting a pending request returns true, updates status to 'rejected', and leaves available_seats unchanged.
+            Assert.True(rides.RejectRequest(req2Id));
+            Assert.Contains(rides.GetIncomingRequests(driverNim), r => r.RequestId == req2Id && r.Status == "rejected");
+            Assert.Equal(0, Assert.Single(rides.GetDriverRides(driverNim), r => r.RideId == rideId).Seats);
+
+            // Non-existent request IDs must return false cleanly.
+            Assert.False(rides.ApproveRequest(-1));
+            Assert.False(rides.RejectRequest(-1));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("BARENGIN_DB", prevEnv);
+            BarengIn.Desktop.AppDb.ConfigFilePath = prevPath;
+            BarengIn.Desktop.AppDb.ResetAvailabilityCache();
+            if (File.Exists(tempConfig))
+            {
+                File.Delete(tempConfig);
+            }
+        }
+    }
+
     [Fact]
     public void Departure_SubtractsMinutes()
     {
