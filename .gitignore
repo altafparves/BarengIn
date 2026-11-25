@@ -453,3 +453,7 @@ seed/*.local.json
 
 # macOS
 .DS_Store
+
+# Windows release bundles
+dist/
+BarengIn-MVP-win-x64.zip

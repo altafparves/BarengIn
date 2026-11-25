@@ -1,9 +1,10 @@
 namespace BarengIn.Domain.Enums;
 
-/// <summary>Outcome of student ID (KTM) verification.</summary>
+/// <summary>Review state of a user's KTM (student ID card) submission.</summary>
 public enum VerificationStatus
 {
-    PendingVerification = 0,
-    Verified = 1,
-    Rejected = 2
+    Unverified,
+    Pending,
+    Verified,
+    Rejected
 }

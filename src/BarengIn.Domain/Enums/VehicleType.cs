@@ -1,8 +1,8 @@
 namespace BarengIn.Domain.Enums;
 
-/// <summary>Vehicle categories supported for campus commuting.</summary>
+/// <summary>Category of vehicle a driver offers a trip in.</summary>
 public enum VehicleType
 {
-    Motorcycle = 0,
-    Car = 1
+    Motorcycle,
+    Car
 }
