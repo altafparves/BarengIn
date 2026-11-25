@@ -6,7 +6,14 @@ public class TripRow : INotifyPropertyChanged
 {
     private int seats;
 
-    public TripRow(string pickup, string faculty, string departs, int seats, string cost, Guid? tripId = null)
+    public TripRow(
+        string pickup,
+        string faculty,
+        string departs,
+        int seats,
+        string cost,
+        Guid? tripId = null,
+        int dbRideId = 0)
     {
         Pickup = pickup;
         Faculty = faculty;
@@ -14,9 +21,11 @@ public class TripRow : INotifyPropertyChanged
         this.seats = seats;
         Cost = cost;
         TripId = tripId ?? Guid.NewGuid();
+        DbRideId = dbRideId;
     }
 
     public Guid TripId { get; }
+    public int DbRideId { get; }
     public string Pickup { get; }
     public string Faculty { get; }
     public string Departs { get; }

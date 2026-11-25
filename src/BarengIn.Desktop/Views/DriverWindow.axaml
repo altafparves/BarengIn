@@ -68,7 +68,11 @@
             </StackPanel>
 
             <Grid Grid.Column="2" RowDefinitions="Auto,*">
-                <TextBlock Classes="section" Text="Ride requests" />
+                <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                    <TextBlock Classes="section" Text="Ride requests" VerticalAlignment="Center" />
+                    <Button x:Name="btnRefresh" Grid.Column="1" Classes="secondary" Content="Refresh"
+                            Width="90" Click="btnRefresh_Click" />
+                </Grid>
                 <Border Grid.Row="1" BorderBrush="#D0D0D0" BorderThickness="1">
                     <ListBox x:Name="lvRequests">
                         <ListBox.ItemTemplate>

@@ -23,10 +23,19 @@ public partial class LoginWindow : Window
         }
 
         string selectedRole = cbRole.SelectedIndex == 1 ? "Driver" : "Passenger";
+        string faculty;
+        string hobbies;
+        string bio;
         User? user;
         try
         {
-            user = AppDb.AuthenticateOrFallback(tbUsername.Text!.Trim(), tbPassword.Text!, selectedRole);
+            user = AppDb.AuthenticateOrFallback(
+                tbUsername.Text!.Trim(),
+                tbPassword.Text!,
+                selectedRole,
+                out faculty,
+                out hobbies,
+                out bio);
         }
         catch (Exception ex)
         {
@@ -41,7 +50,7 @@ public partial class LoginWindow : Window
         }
 
         // Polymorphism: same call, different result depending on the real class.
-        AppSession.SignIn(user);
+        AppSession.SignIn(user, faculty, hobbies, bio);
         Navigator.GoHome(this);
     }
 
