@@ -68,23 +68,85 @@ public sealed class UserRepository
         return userId > 0;
     }
 
+    public bool UpdateProfile(string ktmNumber, string facultyName, string hobbies, string bio)
+    {
+        if (string.IsNullOrWhiteSpace(ktmNumber))
+        {
+            return false;
+        }
+
+        string trimmedKtm = ktmNumber.Trim();
+        string trimmedFaculty = (facultyName ?? string.Empty).Trim();
+        string trimmedHobbies = (hobbies ?? string.Empty).Trim();
+        string trimmedBio = (bio ?? string.Empty).Trim();
+
+        using var conn = db.Open();
+        using var tx = conn.BeginTransaction();
+
+        if (!string.IsNullOrEmpty(trimmedFaculty))
+        {
+            using var facCmd = new NpgsqlCommand(@"
+                INSERT INTO faculty (name, short_name, latitude, longitude)
+                VALUES (@faculty, LEFT(@faculty, 20), -7.7654, 110.3723)
+                ON CONFLICT (name) DO NOTHING;", conn, tx);
+            facCmd.Parameters.AddWithValue("faculty", trimmedFaculty);
+            facCmd.ExecuteNonQuery();
+        }
+
+        using var usrCmd = new NpgsqlCommand(@"
+            UPDATE users
+            SET faculty_id = COALESCE((SELECT faculty_id FROM faculty WHERE name = @faculty), faculty_id),
+                hobbies = @hobbies,
+                bio = @bio
+            WHERE ktm_number = @ktm;", conn, tx);
+        usrCmd.Parameters.AddWithValue("faculty", trimmedFaculty);
+        usrCmd.Parameters.AddWithValue("hobbies", trimmedHobbies);
+        usrCmd.Parameters.AddWithValue("bio", trimmedBio);
+        usrCmd.Parameters.AddWithValue("ktm", trimmedKtm);
+
+        int rows = usrCmd.ExecuteNonQuery();
+        if (rows != 1)
+        {
+            return false;
+        }
+
+        tx.Commit();
+        return true;
+    }
+
     /// <summary>
     /// Login process (Task 1). Checks the password, then builds the correct subclass of User.
     /// The caller only sees a "User", but the real object is a Passenger, Driver or Admin.
     /// Returns null if the NIM or password is wrong.
     /// </summary>
-    public User? Authenticate(string ktmNumber, string password)
+    public User? Authenticate(string ktmNumber, string password) =>
+        Authenticate(ktmNumber, password, out _, out _, out _);
+
+    public User? Authenticate(
+        string ktmNumber,
+        string password,
+        out string facultyName,
+        out string hobbies,
+        out string bio)
     {
+        facultyName = string.Empty;
+        hobbies = string.Empty;
+        bio = string.Empty;
+
         using var conn = db.Open();
         using var cmd = new NpgsqlCommand(@"
             SELECT u.full_name, u.email, u.phone_number, u.password_hash, u.ktm_number,
                    u.role::text,
                    COALESCE(p.home_address, '-'),
                    COALESCE(d.license_number, '-'),
-                   u.verification_status::text
+                   u.verification_status::text,
+                   COALESCE(f.name, ''),
+                   COALESCE(u.hobbies, ''),
+                   COALESCE(u.bio, '')
             FROM users u
             LEFT JOIN passenger p ON p.user_id = u.user_id
             LEFT JOIN driver d    ON d.user_id = u.user_id
+            LEFT JOIN faculty f   ON f.faculty_id = u.faculty_id
             WHERE u.ktm_number = @ktm", conn);
         cmd.Parameters.AddWithValue("ktm", ktmNumber);
 
@@ -100,13 +162,26 @@ public sealed class UserRepository
         string address = r.GetString(6);
         string license = r.GetString(7);
         string verificationStatus = r.GetString(8);
+        string loadedFaculty = r.GetString(9);
+        string loadedHobbies = r.GetString(10);
+        string loadedBio = r.GetString(11);
 
         if (!BCrypt.Net.BCrypt.Verify(password, hash)) return null;
+
+        facultyName = loadedFaculty;
+        hobbies = loadedHobbies;
+        bio = loadedBio;
 
         bool isVerified = !verificationStatus.Equals("unverified", StringComparison.OrdinalIgnoreCase)
                        && !verificationStatus.Equals("rejected", StringComparison.OrdinalIgnoreCase);
 
-        return BuildUserForRole(niu, name, email, hash, phone, role, address, license, isVerified);
+        User user = BuildUserForRole(niu, name, email, hash, phone, role, address, license, isVerified);
+        if (!string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(phone))
+        {
+            user.UpdateProfile(name, phone, bio);
+        }
+
+        return user;
     }
 
     public static User BuildUserForRole(

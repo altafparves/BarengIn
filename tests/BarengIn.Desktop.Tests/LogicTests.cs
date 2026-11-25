@@ -356,6 +356,81 @@ public class LogicTests
     }
 
     [Fact]
+    public void UserRepository_UpdateProfile_WithBlankKtm_ReturnsFalseWithoutOpeningDb()
+    {
+        var db = new BarengIn.Infrastructure.Persistence.Database("Host=127.0.0.1;Port=54329;Database=nonexistent;Username=postgres;Password=x;Timeout=1");
+        var users = new BarengIn.Infrastructure.Persistence.UserRepository(db);
+
+        Assert.False(users.UpdateProfile("", "MIPA", "Coding", "Bio"));
+        Assert.False(users.UpdateProfile("   ", "MIPA", "Coding", "Bio"));
+        Assert.False(users.UpdateProfile(null!, "MIPA", "Coding", "Bio"));
+    }
+
+    [Fact]
+    public void UserRepository_UpdateProfile_PersistsFacultyHobbiesBio_AndAuthenticateRestoresThem()
+    {
+        string cs = Environment.GetEnvironmentVariable("BARENGIN_TEST_DB")
+            ?? $"Host=localhost;Port=5432;Database=barengin;Username={Environment.UserName};Timeout=1";
+
+        try
+        {
+            using var probe = new Npgsql.NpgsqlConnection(cs);
+            probe.Open();
+        }
+        catch
+        {
+            Assert.Skip("Local PostgreSQL is not running; skipping live UserRepository DB test.");
+            return;
+        }
+
+        var db = new BarengIn.Infrastructure.Persistence.Database(cs);
+        var users = new BarengIn.Infrastructure.Persistence.UserRepository(db);
+        var rides = new BarengIn.Infrastructure.Persistence.RideRepository(db);
+        rides.EnsureSeedData(BarengIn.Desktop.Models.Faculties.All);
+
+        string suffix = Guid.NewGuid().ToString("N")[..6];
+        string ktm = $"PRF/{suffix}";
+
+        Assert.True(users.Register("Altaf Profile", $"prf.{suffix}@ugm.ac.id", $"085{suffix}", "pw123", ktm, "MIPA", "Passenger"));
+
+        // Initial auth returns registered faculty and empty hobbies/bio.
+        var initialUser = users.Authenticate(ktm, "pw123", out string fac0, out string hob0, out string bio0);
+        Assert.NotNull(initialUser);
+        Assert.Equal("MIPA", fac0);
+        Assert.Equal(string.Empty, hob0);
+        Assert.Equal(string.Empty, bio0);
+        Assert.Equal(string.Empty, initialUser!.Bio);
+
+        // UpdateProfile persists faculty, hobbies, and bio.
+        Assert.True(users.UpdateProfile(ktm, "Engineering (FT)", "  Cycling, Coffee  ", "  CS student  "));
+
+        // 5-arg Authenticate restores faculty, hobbies, and bio (and populates Domain User.Bio).
+        var updatedUser5 = users.Authenticate(ktm, "pw123", out string fac1, out string hob1, out string bio1);
+        Assert.NotNull(updatedUser5);
+        Assert.Equal("Engineering (FT)", fac1);
+        Assert.Equal("Cycling, Coffee", hob1);
+        Assert.Equal("CS student", bio1);
+        Assert.Equal("CS student", updatedUser5!.Bio);
+
+        // 2-arg backward-compatible Authenticate also restores Domain User.Bio.
+        var updatedUser2 = users.Authenticate(ktm, "pw123");
+        Assert.NotNull(updatedUser2);
+        Assert.Equal("CS student", updatedUser2!.Bio);
+
+        // Clearing hobbies/bio and changing faculty updates cleanly.
+        Assert.True(users.UpdateProfile(ktm, "Medicine", "", ""));
+        var clearedUser = users.Authenticate(ktm, "pw123", out string fac2, out string hob2, out string bio2);
+        Assert.NotNull(clearedUser);
+        Assert.Equal("Medicine", fac2);
+        Assert.Equal(string.Empty, hob2);
+        Assert.Equal(string.Empty, bio2);
+        Assert.Equal(string.Empty, clearedUser!.Bio);
+
+        // Non-existent KTM returns false.
+        Assert.False(users.UpdateProfile($"MISSING/{suffix}", "MIPA", "Reading", "Bio"));
+    }
+
+    [Fact]
     public void Departure_SubtractsMinutes()
     {
         Assert.Equal("07:30", RideLogic.Departure(new TimeSpan(8, 0, 0), 30));
