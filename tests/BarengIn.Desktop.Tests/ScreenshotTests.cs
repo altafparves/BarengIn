@@ -8,6 +8,7 @@ namespace BarengIn.Desktop.Tests;
 
 // Regenerates the PNGs used in the Module 7 & Module 9 worksheets.
 // Run with: BARENGIN_SCREENSHOTS=1 dotnet test --filter ScreenshotTests
+[Collection("AppDbSerial")]
 public class ScreenshotTests
 {
     private static string OutputDir(string moduleName = "module-9")
