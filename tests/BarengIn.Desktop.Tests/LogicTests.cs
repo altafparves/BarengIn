@@ -185,6 +185,7 @@ public class LogicTests
 
             // 2. Malformed JSON falls back cleanly to DefaultConnectionString without throwing.
             File.WriteAllText(tempFile, "{ invalid json");
+            BarengIn.Desktop.AppDb.ConfigFilePath = tempFile;
             BarengIn.Desktop.AppDb.ResetAvailabilityCache();
             Assert.Contains("PASSWORDHERE", BarengIn.Desktop.AppDb.ConnectionString);
             Assert.False(BarengIn.Desktop.AppDb.IsDatabaseConfigured);
@@ -345,6 +346,25 @@ public class LogicTests
         }
         finally
         {
+            try
+            {
+                using var cleanupConn = new Npgsql.NpgsqlConnection(cs);
+                cleanupConn.Open();
+                using var cleanupCmd = new Npgsql.NpgsqlCommand(@"
+                    DELETE FROM ride_request WHERE ride_id IN (SELECT ride_id FROM ride r JOIN users u ON u.user_id = r.driver_id WHERE u.ktm_number = @d);
+                    DELETE FROM ride WHERE driver_id IN (SELECT user_id FROM users WHERE ktm_number = @d);
+                    DELETE FROM vehicle WHERE driver_id IN (SELECT user_id FROM users WHERE ktm_number = @d);
+                    DELETE FROM users WHERE ktm_number IN (@d, @p1, @p2);", cleanupConn);
+                cleanupCmd.Parameters.AddWithValue("d", driverNim);
+                cleanupCmd.Parameters.AddWithValue("p1", pax1Nim);
+                cleanupCmd.Parameters.AddWithValue("p2", pax2Nim);
+                cleanupCmd.ExecuteNonQuery();
+            }
+            catch
+            {
+                // Ignore test cleanup errors.
+            }
+
             Environment.SetEnvironmentVariable("BARENGIN_DB", prevEnv);
             BarengIn.Desktop.AppDb.ConfigFilePath = prevPath;
             BarengIn.Desktop.AppDb.ResetAvailabilityCache();
@@ -428,6 +448,12 @@ public class LogicTests
 
         // Non-existent KTM returns false.
         Assert.False(users.UpdateProfile($"MISSING/{suffix}", "MIPA", "Reading", "Bio"));
+
+        using var cleanupConn = new Npgsql.NpgsqlConnection(cs);
+        cleanupConn.Open();
+        using var cleanupCmd = new Npgsql.NpgsqlCommand("DELETE FROM users WHERE ktm_number = @ktm;", cleanupConn);
+        cleanupCmd.Parameters.AddWithValue("ktm", ktm);
+        cleanupCmd.ExecuteNonQuery();
     }
 
     [Fact]

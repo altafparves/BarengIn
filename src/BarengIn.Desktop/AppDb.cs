@@ -11,6 +11,14 @@ public static class AppDb
     private const string DefaultConnectionString =
         "Host=localhost;Port=5432;Database=barengin;Username=postgres;Password=PASSWORDHERE";
 
+    private static readonly Dictionary<string, (string FullName, string Email, string Phone, string Password, string Faculty, string Role)> OfflineRegisteredUsers =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    private static readonly HttpClient SharedHttpClient = new()
+    {
+        Timeout = TimeSpan.FromSeconds(8),
+    };
+
     private static bool? cachedAvailable;
 
     public static string? ConfigFilePath { get; set; }
@@ -82,13 +90,24 @@ public static class AppDb
     public static Func<string, string, CancellationToken, Task<RouteEstimate>> RouteEstimator { get; set; } =
         EstimateRouteWithDefaultServiceAsync;
 
+    public static Func<string, CancellationToken, Task<IReadOnlyList<PlaceSuggestion>>> PlaceSuggester { get; set; } =
+        SuggestPlacesWithDefaultServiceAsync;
+
     private static async Task<RouteEstimate> EstimateRouteWithDefaultServiceAsync(
         string pickupArea,
         string facultyName,
         CancellationToken ct)
     {
-        using var service = new RouteApiService();
+        var service = new RouteApiService(SharedHttpClient);
         return await service.GetRouteEstimateAsync(pickupArea, facultyName, ct);
+    }
+
+    private static async Task<IReadOnlyList<PlaceSuggestion>> SuggestPlacesWithDefaultServiceAsync(
+        string query,
+        CancellationToken ct)
+    {
+        var service = new RouteApiService(SharedHttpClient);
+        return await service.SearchPlaceSuggestionsAsync(query, maxResults: 6, ct);
     }
 
     public static User? AuthenticateOrFallback(string nim, string password, string selectedRole) =>
@@ -108,15 +127,37 @@ public static class AppDb
 
         if (IsAvailable)
         {
-            return Users.Authenticate(nim, password, out facultyName, out hobbies, out bio);
+            return Users.Authenticate(nim, password, selectedRole, out facultyName, out hobbies, out bio);
         }
 
+        string trimmedNim = (nim ?? string.Empty).Trim();
+        if (OfflineRegisteredUsers.TryGetValue(trimmedNim, out var reg))
+        {
+            if (reg.Password != password)
+            {
+                return null;
+            }
+
+            facultyName = reg.Faculty;
+            string roleToUse = !string.IsNullOrWhiteSpace(selectedRole) ? selectedRole : reg.Role;
+            return UserRepository.BuildUserForRole(
+                trimmedNim,
+                reg.FullName,
+                reg.Email,
+                "offline-hash",
+                reg.Phone,
+                roleToUse);
+        }
+
+        string displayName = string.IsNullOrWhiteSpace(Models.AppSession.Name)
+            ? trimmedNim
+            : Models.AppSession.Name;
         return UserRepository.BuildUserForRole(
-            nim,
-            nim,
-            nim + "@mail.ugm.ac.id",
+            trimmedNim,
+            displayName,
+            trimmedNim + "@mail.ugm.ac.id",
             "offline-hash",
-            nim,
+            "08123456789",
             selectedRole);
     }
 
@@ -129,6 +170,15 @@ public static class AppDb
         string facultyName,
         string role)
     {
+        string trimmedKtm = (ktmNumber ?? string.Empty).Trim();
+        OfflineRegisteredUsers[trimmedKtm] = (
+            fullName.Trim(),
+            email.Trim(),
+            phone.Trim(),
+            password,
+            facultyName.Trim(),
+            role.Trim());
+
         if (IsAvailable)
         {
             return Users.Register(fullName, email, phone, password, ktmNumber, facultyName, role);

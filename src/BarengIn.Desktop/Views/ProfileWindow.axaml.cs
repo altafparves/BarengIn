@@ -14,6 +14,13 @@ public partial class ProfileWindow : Window
         lblInitials.Text = Display.Initials(AppSession.Name);
         lblName.Text = AppSession.Name;
         lblNimRole.Text = AppSession.Nim + "  ·  " + AppSession.Role;
+
+        lblFullNameValue.Text = string.IsNullOrWhiteSpace(AppSession.Name) ? "-" : AppSession.Name;
+        lblNimValue.Text = string.IsNullOrWhiteSpace(AppSession.Nim) ? "-" : AppSession.Nim;
+        lblFacultyValue.Text = string.IsNullOrWhiteSpace(AppSession.Faculty) ? "-" : AppSession.Faculty;
+        lblEmailValue.Text = string.IsNullOrWhiteSpace(AppSession.CurrentUser?.Email) ? "-" : AppSession.CurrentUser!.Email;
+        lblPhoneValue.Text = string.IsNullOrWhiteSpace(AppSession.CurrentUser?.PhoneNumber) ? "-" : AppSession.CurrentUser!.PhoneNumber;
+
         cbFaculty.ItemsSource = Faculties.All;
         cbFaculty.SelectedItem = AppSession.Faculty;
         tbHobbies.Text = AppSession.Hobbies;
@@ -27,13 +34,20 @@ public partial class ProfileWindow : Window
 
     private async void btnSave_Click(object? sender, RoutedEventArgs e)
     {
-        AppSession.Faculty = cbFaculty.SelectedItem as string ?? AppSession.Faculty;
+        if (cbFaculty.SelectedItem is string selectedFac && !string.IsNullOrWhiteSpace(selectedFac))
+        {
+            AppSession.Faculty = selectedFac;
+            lblFacultyValue.Text = selectedFac;
+        }
+
         AppSession.Hobbies = (tbHobbies.Text ?? "").Trim();
         AppSession.Bio = (tbBio.Text ?? "").Trim();
 
         // Encapsulation: mutate protected User fields through public UpdateProfile method.
         string safeName = string.IsNullOrWhiteSpace(AppSession.Name) ? "Student" : AppSession.Name;
-        string safePhone = string.IsNullOrWhiteSpace(AppSession.Nim) ? "08123456789" : AppSession.Nim;
+        string safePhone = string.IsNullOrWhiteSpace(AppSession.CurrentUser?.PhoneNumber)
+            ? (string.IsNullOrWhiteSpace(AppSession.Nim) ? "08123456789" : AppSession.Nim)
+            : AppSession.CurrentUser!.PhoneNumber;
         AppSession.CurrentUser?.UpdateProfile(safeName, safePhone, AppSession.Bio);
 
         if (AppDb.IsAvailable && !string.IsNullOrWhiteSpace(AppSession.Nim))
@@ -48,7 +62,7 @@ public partial class ProfileWindow : Window
             }
         }
 
-        await MessageBox.Show(this, "Profile saved.");
+        await MessageBox.Show(this, "Profile saved (Hobbies & Bio updated).");
     }
 
     private void btnBack_Click(object? sender, RoutedEventArgs e)

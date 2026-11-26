@@ -14,6 +14,8 @@ public partial class DriverWindow : Window
     private readonly ObservableCollection<TripRow> trips;
     private readonly Driver activeDriver;
     private CancellationTokenSource? routeCts;
+    private CancellationTokenSource? suggestCts;
+    private bool suppressSuggestions;
 
     public DriverWindow()
     {
@@ -46,15 +48,111 @@ public partial class DriverWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
-        routeCts?.Cancel();
-        routeCts?.Dispose();
-        routeCts = null;
+        CancelAndClear(ref routeCts);
+        CancelAndClear(ref suggestCts);
         base.OnClosed(e);
+    }
+
+    private static void CancelAndClear(ref CancellationTokenSource? target)
+    {
+        var old = Interlocked.Exchange(ref target, null);
+        if (old is null)
+        {
+            return;
+        }
+
+        try
+        {
+            old.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        finally
+        {
+            old.Dispose();
+        }
+    }
+
+    private async void tbOrigin_TextChanged(object? sender, TextChangedEventArgs e)
+    {
+        if (suppressSuggestions)
+        {
+            return;
+        }
+
+        string query = (tbOrigin.Text ?? "").Trim();
+        if (query.Length == 0)
+        {
+            bdrSuggestions.IsVisible = false;
+            lvSuggestions.ItemsSource = null;
+            return;
+        }
+
+        var localMatches = RouteApiService.SearchLocalPlaceSuggestions(query, maxResults: 5);
+        lvSuggestions.ItemsSource = localMatches;
+        bdrSuggestions.IsVisible = localMatches.Count > 0;
+
+        CancelAndClear(ref suggestCts);
+        if (query.Length < 3 || localMatches.Count >= 5)
+        {
+            return;
+        }
+
+        var cts = new CancellationTokenSource();
+        suggestCts = cts;
+        try
+        {
+            await Task.Delay(250, cts.Token);
+            var suggestions = await AppDb.PlaceSuggester(query, cts.Token);
+            if (!cts.IsCancellationRequested && ReferenceEquals(suggestCts, cts))
+            {
+                lvSuggestions.ItemsSource = suggestions;
+                bdrSuggestions.IsVisible = suggestions.Count > 0;
+            }
+        }
+        catch
+        {
+            // Ignore cancellation or network errors during live typing.
+        }
+    }
+
+    private async void lvSuggestions_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (lvSuggestions.SelectedItem is not PlaceSuggestion selected)
+        {
+            return;
+        }
+
+        CancelAndClear(ref suggestCts);
+
+        suppressSuggestions = true;
+        tbOrigin.Text = selected.Title;
+        bdrSuggestions.IsVisible = false;
+        lvSuggestions.SelectedItem = null;
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            bdrSuggestions.IsVisible = false;
+            suppressSuggestions = false;
+        });
+
+        string faculty = cbFaculty.SelectedItem as string ?? Faculties.All[0];
+        await UpdateRoutePreviewAsync(selected.Title, faculty);
     }
 
     private async void btnCheckRoute_Click(object? sender, RoutedEventArgs e)
     {
+        bdrSuggestions.IsVisible = false;
         string origin = (tbOrigin.Text ?? "").Trim();
+        if (origin == "" && lvTrips.SelectedItem is TripRow selectedTrip)
+        {
+            origin = selectedTrip.Pickup;
+        }
+        else if (origin == "" && trips.Count > 0)
+        {
+            origin = trips[^1].Pickup;
+        }
+
         if (origin == "")
         {
             await MessageBox.Show(this, "Please enter your pickup area.");
@@ -67,8 +165,7 @@ public partial class DriverWindow : Window
 
     private async Task UpdateRoutePreviewAsync(string origin, string faculty)
     {
-        routeCts?.Cancel();
-        routeCts?.Dispose();
+        CancelAndClear(ref routeCts);
         var cts = new CancellationTokenSource();
         routeCts = cts;
 
@@ -117,7 +214,7 @@ public partial class DriverWindow : Window
                 dbRideId: r.RideId));
         }
 
-        var dbRequests = AppDb.Rides.GetIncomingRequests(AppSession.Nim);
+        var dbRequests = AppDb.Rides.GetIncomingRequestsWithProfile(AppSession.Nim);
         AppSession.DriverRequests.Clear();
         foreach (var req in dbRequests)
         {
@@ -133,7 +230,10 @@ public partial class DriverWindow : Window
                 req.Faculty,
                 dbRequestId: req.RequestId,
                 dbRideId: req.RideId,
-                initialStatus: uiStatus));
+                initialStatus: uiStatus,
+                passengerNim: req.PassengerNim,
+                hobbies: req.Hobbies,
+                bio: req.Bio));
         }
     }
 
@@ -151,6 +251,7 @@ public partial class DriverWindow : Window
 
     private async void btnPost_Click(object? sender, RoutedEventArgs e)
     {
+        bdrSuggestions.IsVisible = false;
         string origin = (tbOrigin.Text ?? "").Trim();
         if (origin == "")
         {
@@ -206,7 +307,10 @@ public partial class DriverWindow : Window
                 Display.Rupiah(cost),
                 trip.TripId));
         }
+        suppressSuggestions = true;
         tbOrigin.Text = "";
+        bdrSuggestions.IsVisible = false;
+        suppressSuggestions = false;
         await UpdateRoutePreviewAsync(origin, faculty);
     }
 

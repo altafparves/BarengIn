@@ -12,6 +12,8 @@ public class ScreenBehaviorTests
 {
     private static HomeWindow NewHome()
     {
+        Environment.SetEnvironmentVariable("BARENGIN_DB", "Host=localhost;Port=5432;Database=barengin;Username=postgres;Password=PASSWORDHERE");
+        BarengIn.Desktop.AppDb.ResetAvailabilityCache();
         AppSession.Reset();
         AppSession.SignIn("24/536741", "Passenger");
         var home = new HomeWindow();
@@ -21,6 +23,8 @@ public class ScreenBehaviorTests
 
     private static DriverWindow NewDriver()
     {
+        Environment.SetEnvironmentVariable("BARENGIN_DB", "Host=localhost;Port=5432;Database=barengin;Username=postgres;Password=PASSWORDHERE");
+        BarengIn.Desktop.AppDb.ResetAvailabilityCache();
         AppSession.Reset();
         AppSession.SignIn("24/536741", "Driver");
         var driver = new DriverWindow();
@@ -167,7 +171,7 @@ public class ScreenBehaviorTests
         string? prevEnv = Environment.GetEnvironmentVariable("BARENGIN_DB");
         try
         {
-            Environment.SetEnvironmentVariable("BARENGIN_DB", null);
+            Environment.SetEnvironmentVariable("BARENGIN_DB", "Host=localhost;Port=5432;Database=barengin;Username=postgres;Password=PASSWORDHERE");
             BarengIn.Desktop.AppDb.ResetAvailabilityCache();
 
             var driverWindow = NewDriver();
@@ -320,6 +324,25 @@ public class ScreenBehaviorTests
         }
         finally
         {
+            try
+            {
+                using var cleanupConn = new Npgsql.NpgsqlConnection(cs);
+                cleanupConn.Open();
+                using var cleanupCmd = new Npgsql.NpgsqlCommand(@"
+                    DELETE FROM ride_request WHERE ride_id IN (SELECT ride_id FROM ride r JOIN users u ON u.user_id = r.driver_id WHERE u.ktm_number = @d);
+                    DELETE FROM ride WHERE driver_id IN (SELECT user_id FROM users WHERE ktm_number = @d);
+                    DELETE FROM vehicle WHERE driver_id IN (SELECT user_id FROM users WHERE ktm_number = @d);
+                    DELETE FROM users WHERE ktm_number IN (@d, @p1, @p2);", cleanupConn);
+                cleanupCmd.Parameters.AddWithValue("d", driverNim);
+                cleanupCmd.Parameters.AddWithValue("p1", pax1Nim);
+                cleanupCmd.Parameters.AddWithValue("p2", pax2Nim);
+                cleanupCmd.ExecuteNonQuery();
+            }
+            catch
+            {
+                // Ignore test cleanup errors.
+            }
+
             AppSession.Reset();
             Environment.SetEnvironmentVariable("BARENGIN_DB", prevEnv);
             BarengIn.Desktop.AppDb.ConfigFilePath = prevPath;
@@ -388,6 +411,57 @@ public class ScreenBehaviorTests
             driverWindow?.Close();
             BarengIn.Desktop.AppDb.RouteEstimator = prevEstimator;
         }
+    }
+
+    [AvaloniaFact]
+    public void Home_TypingPickupArea_ShowsPlaceSuggestions_AndSelectingOneFillsTextBox()
+    {
+        var home = NewHome();
+        var tbOrigin = home.Find<TextBox>("tbOrigin");
+        tbOrigin.Text = "pogu";
+        Dispatcher.UIThread.RunJobs();
+
+        var bdr = home.Find<Border>("bdrSuggestions");
+        var list = home.Find<ListBox>("lvSuggestions");
+        Assert.True(bdr.IsVisible);
+        var suggestions = Assert.IsAssignableFrom<IEnumerable<PlaceSuggestion>>(list.ItemsSource).ToList();
+        Assert.Contains(suggestions, s => s.Title.Contains("Pogung Lor", StringComparison.OrdinalIgnoreCase));
+
+        list.SelectedIndex = 0;
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(suggestions[0].Title, tbOrigin.Text);
+        Assert.False(bdr.IsVisible);
+    }
+
+    [AvaloniaFact]
+    public void Profile_DisplaysReadOnlyIdentityFields_AndAllowsEditingHobbiesAndBio()
+    {
+        AppSession.Reset();
+        var user = BarengIn.Infrastructure.Persistence.UserRepository.BuildUserForRole(
+            "24/536741/TK/59565",
+            "Altaf Parves",
+            "altaf@mail.ugm.ac.id",
+            "hash",
+            "081234567890",
+            "Passenger");
+        AppSession.SignIn(user, "Engineering (FT)", "badminton", "Morning commuter");
+
+        var profile = new ProfileWindow();
+        profile.Show();
+
+        Assert.Equal("Altaf Parves", profile.Find<TextBlock>("lblFullNameValue").Text);
+        Assert.Equal("24/536741/TK/59565", profile.Find<TextBlock>("lblNimValue").Text);
+        Assert.Equal("Engineering (FT)", profile.Find<TextBlock>("lblFacultyValue").Text);
+        Assert.Equal("altaf@mail.ugm.ac.id", profile.Find<TextBlock>("lblEmailValue").Text);
+        Assert.Equal("081234567890", profile.Find<TextBlock>("lblPhoneValue").Text);
+        Assert.False(profile.Find<ComboBox>("cbFaculty").IsVisible);
+
+        profile.Find<TextBox>("tbHobbies").Text = "badminton, coffee";
+        profile.Find<TextBox>("tbBio").Text = "Updated bio";
+        profile.Click("btnSave");
+
+        Assert.Equal("badminton, coffee", AppSession.Hobbies);
+        Assert.Equal("Updated bio", AppSession.Bio);
     }
 
     [AvaloniaFact]

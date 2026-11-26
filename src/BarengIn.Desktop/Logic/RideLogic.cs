@@ -6,11 +6,11 @@ public static class RideLogic
 {
     public const double Co2PerRequest = 1.2;
 
-    private static readonly (string Driver, int MinutesBefore, int Seats, string Cost)[] Sample =
+    private static readonly (string Driver, string Pickup, int MinutesBefore, int Seats, string Cost)[] Sample =
     {
-        ("Altaf", 30, 3, "Rp 5.000"),
-        ("Dimas", 45, 2, "Rp 7.000"),
-        ("Diffie", 60, 1, "Rp 6.000"),
+        ("Altaf", "Jakal Km 5", 30, 3, "Rp 5.000"),
+        ("Dimas", "Seturan", 45, 2, "Rp 7.000"),
+        ("Diffie", "Condongcatur", 60, 1, "Rp 6.000"),
     };
 
     public static string Departure(TimeSpan classStart, int minutesBefore)
@@ -26,7 +26,7 @@ public static class RideLogic
         var rides = new List<RideRow>();
         foreach (var s in Sample)
         {
-            rides.Add(new RideRow(s.Driver, faculty, Departure(classStart, s.MinutesBefore), s.Seats, s.Cost));
+            rides.Add(new RideRow(s.Driver, faculty, Departure(classStart, s.MinutesBefore), s.Seats, s.Cost, 0, s.Pickup));
         }
         return rides;
     }
