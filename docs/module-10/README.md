@@ -1,6 +1,6 @@
 # Module 10 Guide — BarengIn Desktop MVP (Database, Packaging, Usage & Testing)
 
-This guide covers setting up PostgreSQL (or running in offline mode), packaging and running the Windows `.exe` bundle, using every screen of the BarengIn Desktop application, and reviewing the [Lab 10.2 Black Box Testing Report](BLACK_BOX_TESTING.md).
+This guide covers setting up PostgreSQL (or running in offline mode), packaging and running the Windows `.exe` bundle, using every screen of the revamped BarengIn Desktop application (including the **Admin Dashboard**), and reviewing the [Lab 10.2 Black Box Testing Report](BLACK_BOX_TESTING.md).
 
 ---
 
@@ -62,41 +62,50 @@ This publishes a self-contained single-file `win-x64` binary (`-p:PublishSingleF
 
 ---
 
-## 3. Step-by-Step User Guide
+## 3. Step-by-Step User Guide (All 6 Screens)
 
 ### Step 1 — Create an Account (`RegisterWindow`)
-Click **No account yet? Create one** on the login screen to open registration. Enter your **Full name**, **Student ID (NIM)**, **Faculty**, **Password** (minimum 6 characters), **Confirm password**, and attach a KTM image via **Choose file...**, then click **Register**.
+Click **No account yet? Create one** on the login screen to open registration. Enter your **Full name**, **Student ID (NIM)**, optional **UGM Email** & **Phone**, **Faculty / Campus Destination** (from 33 UGM faculties, schools, and campus landmarks), **Role** (`Passenger` or `Driver`), **Password** (minimum 6 characters), **Confirm password**, and attach a KTM image via **Choose file...**, then click **Register**. Newly registered accounts start with **`KTM pending`** verification status until verified by an Administrator.
 
 ![Register screen](screenshots/01-register.png)
 
 ### Step 2 — Log In (`LoginWindow`)
-Choose your role (**Passenger** or **Driver**), enter your **Student ID (NIM)** and **Password**, and click **Login**. When connected to PostgreSQL, login restores your saved faculty, hobbies, and bio into the session.
+Choose your role (**Passenger**, **Driver**, or **Admin**), enter your **Student ID (NIM) or UGM Email** and **Password**, and click **Login**:
+- **Declared Admin Credentials:** Only declared BarengIn Administrators (e.g., `admin@ugm.ac.id` / `ADMIN/01` / `24/536741` with password `admin123`) can log in with the **Admin** role; regular student accounts are blocked from Admin access.
 
 ![Login screen](screenshots/02-login.png)
 
-### Step 3 — Search Rides, Route Preview & Request a Ride (`HomeWindow`)
-As a **Passenger**, enter your **Pickup area** (e.g., `Jakal Km 5`), pick your destination **Faculty** and **Class starts** time, and click **Find Rides**:
-- Available rides appear immediately in the table.
-- The route preview banner displays `"Checking route..."` and then queries OpenStreetMap Nominatim + OSRM (`RouteApiService`) to display estimated distance, travel time, and CO2 saved (falling back to `"Offline estimate"` when offline).
+### Step 3 — Search Rides, Pickup Autocomplete, Route Preview & Request a Ride (`HomeWindow`)
+As a **Passenger**, start typing your **Pickup area** (e.g., `Pogung` or `Jakal`) to open the live Yogyakarta autocomplete dropdown, pick your destination **Faculty** and **Class starts** time, and click **Find Rides**:
+- Available rides appear immediately with driver social profile cards (NIM, hobbies, bio).
+- The route preview banner displays `"Checking route..."` and queries OpenStreetMap Nominatim + OSRM (`RouteApiService`) to display estimated distance, travel time, and CO2 saved (falling back to `"Offline estimate"` when offline).
 - Select a ride and click **Request Ride** to submit a request and increment **Estimated CO2 saved**.
 
 ![Passenger home screen](screenshots/03-passenger-home.png)
 
 ### Step 4 — Publish Trips, Preview Routes & Manage Requests (`DriverWindow`)
-As a **Driver**, enter a pickup area, destination faculty, departure time, seats, and cost/seat:
+As a **Driver**, enter a pickup area (with live autocomplete suggestions), destination faculty, departure time, seats, and cost/seat:
 - Click **Check Route** to preview distance, ETA, and CO2 savings without posting yet, or click **Post Trip** to publish the trip (persisted to PostgreSQL when available) and update the route preview.
-- Click **Refresh** next to **Ride requests** to reload posted trips and incoming passenger requests from PostgreSQL.
+- Click **Refresh** next to **Incoming passenger requests** to reload posted trips and incoming requests from PostgreSQL.
 - Click **Approve** or **Reject** on a pending request. Approving atomically decrements `available_seats` in PostgreSQL inside a transaction and prevents overbooking when seats reach `0`.
 
 ![Driver dashboard screen](screenshots/04-driver.png)
 
-### Step 5 — Edit Profile (`ProfileWindow`)
-Click **Profile** from either the Passenger or Driver screen to view your KTM verification badge and update your **Faculty**, **Hobbies**, and **Short bio**. Click **Save** to update the active session and persist the changes to PostgreSQL (`users.faculty_id`, `hobbies`, `bio`).
+### Step 5 — View Identity Card & Edit Profile (`ProfileWindow`)
+Click **Profile** from the Passenger, Driver, or Admin screen to view your read-only student identity card (**Full name**, **Student ID (NIM)**, **Faculty**, **UGM Email**, **Phone**), your dynamic KTM verification badge (**`KTM verified`**, **`KTM pending`**, **`KTM rejected`**, or **`Account suspended`**), and update your **Hobbies** and **Short bio**. Click **Save** to update the active session and persist the changes to PostgreSQL.
 
 ![Profile screen](screenshots/05-profile.png)
+
+### Step 6 — Admin Dashboard: KTM Verification, User Moderation & Sustainability Analytics (`AdminWindow`)
+Log in with Role = **Admin** (e.g., `admin@ugm.ac.id` / `admin123`) to open the **Admin Dashboard**:
+- **KPI Cards:** Monitor Total CO2 Saved (plus trees/year equivalent), Shared Rides, Pending KTMs, and Verified Users.
+- **KTM Verification & User Moderation Queue:** Click **Verify KTM** to approve a student's pending KTM (updating their profile badge to **`KTM verified`**), **Reject** to decline an invalid upload, or **Suspend** to suspend an account.
+- **Top CO2 Savers Leaderboard & Sustainability Report:** View ranked campus commuters by CO2 saved and click **Generate Report** to produce a 30-day Campus Sustainability Report.
+
+![Admin dashboard screen](screenshots/06-admin.png)
 
 ---
 
 ## 4. Black Box Testing (Lab 10.2)
 
-See [`BLACK_BOX_TESTING.md`](BLACK_BOX_TESTING.md) for the full 24-case Black Box Testing table (`BB-01`–`BB-24`), detailed case breakdowns, and automated test traceability matrix.
+See [`BLACK_BOX_TESTING.md`](BLACK_BOX_TESTING.md) for the complete 32-case Black Box Testing report (`BB-01`–`BB-32`) with step-by-step visual test evidence across all 6 screens.
