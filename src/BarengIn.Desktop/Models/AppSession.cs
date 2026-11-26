@@ -70,7 +70,7 @@ public static class AppSession
         DriverRequests = new ObservableCollection<RequestItem>();
         SeededDriverTrip = null;
 
-        if (CurrentUser is Driver driver)
+        if (CurrentUser is Driver driver && !AppDb.IsAvailable)
         {
             SeededDriverTrip = new Trip(
                 driver.UserId,

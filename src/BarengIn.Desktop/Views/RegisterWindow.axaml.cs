@@ -35,24 +35,35 @@ public partial class RegisterWindow : Window
 
     private async void btnRegister_Click(object? sender, RoutedEventArgs e)
     {
-        string? error = Validation.Register(
-            tbName.Text ?? "", tbNim.Text ?? "", tbPassword.Text ?? "", tbConfirm.Text ?? "", ktmFile);
+        string name = (tbName.Text ?? "").Trim();
+        string nim = (tbNim.Text ?? "").Trim();
+        string email = (tbEmail.Text ?? "").Trim();
+        string phone = (tbPhone.Text ?? "").Trim();
+
+        string? error = string.IsNullOrEmpty(email) && string.IsNullOrEmpty(phone)
+            ? Validation.Register(tbName.Text ?? "", tbNim.Text ?? "", tbPassword.Text ?? "", tbConfirm.Text ?? "", ktmFile)
+            : Validation.Register(tbName.Text ?? "", tbNim.Text ?? "", tbPassword.Text ?? "", tbConfirm.Text ?? "", ktmFile, email, phone);
         if (error != null)
         {
             await MessageBox.Show(this, error);
             return;
         }
 
-        string name = tbName.Text!.Trim();
-        string nim = tbNim.Text!.Trim();
+        string effectiveEmail = string.IsNullOrEmpty(email) ? nim + "@mail.ugm.ac.id" : email;
+        string effectivePhone = string.IsNullOrEmpty(phone) ? "0812" + Math.Abs(nim.GetHashCode() % 100000000).ToString("D8") : phone;
         string faculty = cbFaculty.SelectedItem as string ?? Faculties.All[0];
+        string role = cbRole.SelectedIndex == 1 ? "driver" : "passenger";
 
         try
         {
-            // The form has no email/phone field, but the database requires both
-            // (NOT NULL + UNIQUE), so we use temporary values built from the NIM.
-            bool ok = AppDb.RegisterOrFallback(name, nim + "@mail.ugm.ac.id", nim,
-                                               tbPassword.Text!, nim, faculty, "passenger");
+            bool ok = AppDb.RegisterOrFallback(
+                name,
+                effectiveEmail,
+                effectivePhone,
+                tbPassword.Text!,
+                nim,
+                faculty,
+                role);
             if (!ok)
             {
                 await MessageBox.Show(this, "Registration failed.");

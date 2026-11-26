@@ -70,6 +70,10 @@ public sealed class RideRepository
             vehicleId = (int)vehCmd.ExecuteScalar()!;
         }
 
+        (double originLat, double originLng) = Services.RouteApiService.TryGetKnownAreaCoordinates(originAddress, out var originCoords)
+            ? originCoords
+            : (-7.7523, 110.3812);
+
         using var rideCmd = new NpgsqlCommand(@"
             INSERT INTO ride (driver_id, vehicle_id, destination_faculty_id, origin_address,
                               origin_lat, origin_lng, departure_time, available_seats, cost_per_seat, status)
@@ -77,7 +81,7 @@ public sealed class RideRepository
                 @uid,
                 @vid,
                 (SELECT faculty_id FROM faculty WHERE name = @faculty LIMIT 1),
-                @origin, -7.75, 110.38, @departure, @seats, @cost, 'scheduled'
+                @origin, @lat, @lng, @departure, @seats, @cost, 'scheduled'
             )
             RETURNING ride_id;", conn, tx);
 
@@ -85,6 +89,8 @@ public sealed class RideRepository
         rideCmd.Parameters.AddWithValue("vid", vehicleId);
         rideCmd.Parameters.AddWithValue("faculty", facultyName);
         rideCmd.Parameters.AddWithValue("origin", originAddress);
+        rideCmd.Parameters.AddWithValue("lat", originLat);
+        rideCmd.Parameters.AddWithValue("lng", originLng);
         rideCmd.Parameters.AddWithValue("departure", departureTime);
         rideCmd.Parameters.AddWithValue("seats", (short)seats);
         rideCmd.Parameters.AddWithValue("cost", costPerSeat);
@@ -94,12 +100,23 @@ public sealed class RideRepository
         return rideId;
     }
 
-    public List<(int RideId, string DriverName, string Faculty, string Departs, int Seats, decimal Cost)> FindRides(string facultyName)
+    public List<(int RideId, string DriverName, string Origin, string Faculty, string Departs, int Seats, decimal Cost, string DriverNim, string DriverHobbies, string DriverBio)> FindRidesWithOriginAndProfile(
+        string facultyName,
+        string? pickupQuery = null)
     {
-        var list = new List<(int, string, string, string, int, decimal)>();
+        var list = new List<(int, string, string, string, string, int, decimal, string, string, string)>();
         using var conn = db.Open();
         using var cmd = new NpgsqlCommand(@"
-            SELECT r.ride_id, u.full_name, f.name, r.departure_time, r.available_seats, r.cost_per_seat
+            SELECT r.ride_id,
+                   u.full_name,
+                   r.origin_address,
+                   f.name,
+                   r.departure_time,
+                   r.available_seats,
+                   r.cost_per_seat,
+                   u.ktm_number,
+                   COALESCE(u.hobbies, ''),
+                   COALESCE(u.bio, '')
             FROM ride r
             JOIN users u ON u.user_id = r.driver_id
             JOIN faculty f ON f.faculty_id = r.destination_faculty_id
@@ -112,14 +129,63 @@ public sealed class RideRepository
         {
             int rideId = reader.GetInt32(0);
             string driverName = reader.GetString(1);
-            string fac = reader.GetString(2);
-            DateTime dep = reader.GetDateTime(3);
-            int seats = reader.GetInt16(4);
-            decimal cost = reader.GetDecimal(5);
-            list.Add((rideId, driverName, fac, dep.ToString("HH:mm"), seats, cost));
+            string origin = reader.GetString(2);
+            string fac = reader.GetString(3);
+            DateTime dep = reader.GetDateTime(4);
+            int seats = reader.GetInt16(5);
+            decimal cost = reader.GetDecimal(6);
+            string driverNim = reader.GetString(7);
+            string driverHobbies = reader.GetString(8);
+            string driverBio = reader.GetString(9);
+            list.Add((rideId, driverName, origin, fac, dep.ToString("HH:mm"), seats, cost, driverNim, driverHobbies, driverBio));
+        }
+
+        if (!string.IsNullOrWhiteSpace(pickupQuery))
+        {
+            string trimmed = pickupQuery.Trim();
+            var matching = list
+                .Where(r => r.Item3.Contains(trimmed, StringComparison.OrdinalIgnoreCase)
+                         || trimmed.Contains(r.Item3, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            if (matching.Count > 0)
+            {
+                return matching;
+            }
         }
 
         return list;
+    }
+
+    public List<(int RideId, string DriverName, string Origin, string Faculty, string Departs, int Seats, decimal Cost)> FindRidesWithOrigin(
+        string facultyName,
+        string? pickupQuery = null) =>
+        FindRidesWithOriginAndProfile(facultyName, pickupQuery)
+            .Select(r => (r.RideId, r.DriverName, r.Origin, r.Faculty, r.Departs, r.Seats, r.Cost))
+            .ToList();
+
+    public List<(int RideId, string DriverName, string Faculty, string Departs, int Seats, decimal Cost)> FindRides(string facultyName) =>
+        FindRidesWithOrigin(facultyName)
+            .Select(r => (r.RideId, r.DriverName, r.Faculty, r.Departs, r.Seats, r.Cost))
+            .ToList();
+
+    public double GetApprovedPassengerCo2Saved(string passengerNim)
+    {
+        if (string.IsNullOrWhiteSpace(passengerNim))
+        {
+            return 0.0;
+        }
+
+        using var conn = db.Open();
+        using var cmd = new NpgsqlCommand(@"
+            SELECT COUNT(*)
+            FROM ride_request rr
+            JOIN users u ON u.user_id = rr.passenger_id
+            WHERE u.ktm_number = @nim
+              AND rr.status = 'accepted'::request_status_type;", conn);
+        cmd.Parameters.AddWithValue("nim", passengerNim.Trim());
+
+        long approvedCount = cmd.ExecuteScalar() is long c ? c : 0L;
+        return Math.Round(approvedCount * 1.2, 2, MidpointRounding.AwayFromZero);
     }
 
     public List<(int RideId, string Origin, string Faculty, string Departs, int Seats, decimal Cost)> GetDriverRides(string driverNim)
@@ -150,9 +216,9 @@ public sealed class RideRepository
         return list;
     }
 
-    public List<(int RequestId, int RideId, string PassengerName, string PickupAddress, string Faculty, string Status)> GetIncomingRequests(string driverNim)
+    public List<(int RequestId, int RideId, string PassengerName, string PickupAddress, string Faculty, string Status, string PassengerNim, string Hobbies, string Bio)> GetIncomingRequestsWithProfile(string driverNim)
     {
-        var list = new List<(int, int, string, string, string, string)>();
+        var list = new List<(int, int, string, string, string, string, string, string, string)>();
         using var conn = db.Open();
         using var cmd = new NpgsqlCommand(@"
             SELECT rr.request_id,
@@ -160,7 +226,10 @@ public sealed class RideRepository
                    pu.full_name,
                    rr.pickup_address,
                    COALESCE(pf.name, rf.name),
-                   rr.status::text
+                   rr.status::text,
+                   pu.ktm_number,
+                   COALESCE(pu.hobbies, ''),
+                   COALESCE(pu.bio, '')
             FROM ride_request rr
             JOIN ride r ON r.ride_id = rr.ride_id
             JOIN users du ON du.user_id = r.driver_id
@@ -181,11 +250,19 @@ public sealed class RideRepository
             string pickupAddress = reader.GetString(3);
             string faculty = reader.GetString(4);
             string status = reader.GetString(5);
-            list.Add((requestId, rideId, passengerName, pickupAddress, faculty, status));
+            string paxNim = reader.GetString(6);
+            string hobbies = reader.GetString(7);
+            string bio = reader.GetString(8);
+            list.Add((requestId, rideId, passengerName, pickupAddress, faculty, status, paxNim, hobbies, bio));
         }
 
         return list;
     }
+
+    public List<(int RequestId, int RideId, string PassengerName, string PickupAddress, string Faculty, string Status)> GetIncomingRequests(string driverNim) =>
+        GetIncomingRequestsWithProfile(driverNim)
+            .Select(r => (r.RequestId, r.RideId, r.PassengerName, r.PickupAddress, r.Faculty, r.Status))
+            .ToList();
 
     public int InsertRequest(int rideId, string passengerNim, string pickupAddress)
     {
@@ -200,24 +277,38 @@ public sealed class RideRepository
             return 0;
         }
 
+        (double pickupLat, double pickupLng) = Services.RouteApiService.TryGetKnownAreaCoordinates(pickupAddress, out var pickupCoords)
+            ? pickupCoords
+            : (-7.7523, 110.3812);
+
         using (var paxCmd = new NpgsqlCommand(@"
             INSERT INTO passenger (user_id, home_address, default_pickup_lat, default_pickup_lng)
-            VALUES (@uid, @pickup, -7.75, 110.38)
-            ON CONFLICT (user_id) DO NOTHING;", conn, tx))
+            VALUES (@uid, @pickup, @lat, @lng)
+            ON CONFLICT (user_id) DO UPDATE SET
+                home_address = EXCLUDED.home_address,
+                default_pickup_lat = EXCLUDED.default_pickup_lat,
+                default_pickup_lng = EXCLUDED.default_pickup_lng;", conn, tx))
         {
             paxCmd.Parameters.AddWithValue("uid", userId);
             paxCmd.Parameters.AddWithValue("pickup", pickupAddress);
+            paxCmd.Parameters.AddWithValue("lat", pickupLat);
+            paxCmd.Parameters.AddWithValue("lng", pickupLng);
             paxCmd.ExecuteNonQuery();
         }
 
         using var reqCmd = new NpgsqlCommand(@"
             INSERT INTO ride_request (ride_id, passenger_id, pickup_address, pickup_lat, pickup_lng, status)
-            VALUES (@rideId, @uid, @pickup, -7.75, 110.38, 'pending')
-            ON CONFLICT (ride_id, passenger_id) DO UPDATE SET pickup_address = EXCLUDED.pickup_address
+            VALUES (@rideId, @uid, @pickup, @lat, @lng, 'pending')
+            ON CONFLICT (ride_id, passenger_id) DO UPDATE SET
+                pickup_address = EXCLUDED.pickup_address,
+                pickup_lat = EXCLUDED.pickup_lat,
+                pickup_lng = EXCLUDED.pickup_lng
             RETURNING request_id;", conn, tx);
         reqCmd.Parameters.AddWithValue("rideId", rideId);
         reqCmd.Parameters.AddWithValue("uid", userId);
         reqCmd.Parameters.AddWithValue("pickup", pickupAddress);
+        reqCmd.Parameters.AddWithValue("lat", pickupLat);
+        reqCmd.Parameters.AddWithValue("lng", pickupLng);
 
         int reqId = reqCmd.ExecuteScalar() is int id ? id : 0;
         tx.Commit();

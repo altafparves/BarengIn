@@ -10,6 +10,8 @@ public class NavigationTests
 {
     private static LoginWindow NewLogin()
     {
+        Environment.SetEnvironmentVariable("BARENGIN_DB", "Host=localhost;Port=5432;Database=barengin;Username=postgres;Password=PASSWORDHERE");
+        BarengIn.Desktop.AppDb.ResetAvailabilityCache();
         AppSession.Reset();
         var login = new LoginWindow();
         login.Show();

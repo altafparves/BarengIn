@@ -1,9 +1,10 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:m="using:BarengIn.Desktop.Models"
+        xmlns:s="using:BarengIn.Infrastructure.Services"
         x:Class="BarengIn.Desktop.Views.HomeWindow"
         Title="BarengIn - Find a Ride"
-        Width="620" Height="540"
+        Width="740" Height="580"
         MinWidth="560" MinHeight="480"
         CanResize="True"
         WindowStartupLocation="CenterScreen"
@@ -16,18 +17,37 @@
                     Width="90" Click="btnProfile_Click" />
         </Grid>
 
-        <Grid Grid.Row="2" ColumnDefinitions="Auto,*,16,170" RowDefinitions="Auto,8,Auto,8,Auto">
+        <Grid Grid.Row="2" ColumnDefinitions="Auto,*,16,170" RowDefinitions="Auto,4,Auto,8,Auto,8,Auto">
             <TextBlock Grid.Row="0" Classes="label" Text="Pickup area :" Margin="0,0,16,0" />
-            <TextBox x:Name="tbOrigin" Grid.Row="0" Grid.Column="1" PlaceholderText="e.g. Jakal Km 5" />
+            <TextBox x:Name="tbOrigin" Grid.Row="0" Grid.Column="1"
+                     PlaceholderText="Type area (e.g. pogu, jakal, seturan)..."
+                     TextChanged="tbOrigin_TextChanged" />
 
-            <TextBlock Grid.Row="2" Classes="label" Text="Destination :" Margin="0,0,16,0" />
-            <ComboBox x:Name="cbFaculty" Grid.Row="2" Grid.Column="1" HorizontalAlignment="Stretch" />
+            <Border x:Name="bdrSuggestions" Grid.Row="2" Grid.Column="1"
+                    Background="White" BorderBrush="#228B5E" BorderThickness="1"
+                    CornerRadius="6" Padding="2" MaxHeight="165" IsVisible="False">
+                <ListBox x:Name="lvSuggestions" Background="White"
+                         SelectionChanged="lvSuggestions_SelectionChanged">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="s:PlaceSuggestion">
+                            <StackPanel Spacing="1" Margin="2,2">
+                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="13" />
+                                <TextBlock Text="{Binding Subtitle}" Classes="muted" FontSize="11"
+                                           TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Border>
 
-            <TextBlock Grid.Row="4" Classes="label" Text="Class starts :" Margin="0,0,16,0" />
-            <TimePicker x:Name="dtpTime" Grid.Row="4" Grid.Column="1" ClockIdentifier="24HourClock"
+            <TextBlock Grid.Row="4" Classes="label" Text="Destination :" Margin="0,0,16,0" />
+            <ComboBox x:Name="cbFaculty" Grid.Row="4" Grid.Column="1" HorizontalAlignment="Stretch" />
+
+            <TextBlock Grid.Row="6" Classes="label" Text="Class starts :" Margin="0,0,16,0" />
+            <TimePicker x:Name="dtpTime" Grid.Row="6" Grid.Column="1" ClockIdentifier="24HourClock"
                         SelectedTime="08:00:00" HorizontalAlignment="Left" />
 
-            <Button x:Name="btnFind" Grid.Row="0" Grid.RowSpan="5" Grid.Column="3" Classes="primary"
+            <Button x:Name="btnFind" Grid.Row="0" Grid.RowSpan="7" Grid.Column="3" Classes="primary"
                     Content="Find Rides" HorizontalAlignment="Stretch" VerticalAlignment="Center"
                     Height="45" Click="btnFind_Click" />
         </Grid>
@@ -40,23 +60,31 @@
 
         <Border Grid.Row="6" BorderBrush="#D0D0D0" BorderThickness="1">
             <Grid RowDefinitions="Auto,*">
-                <Grid Background="#F3F3F3" Margin="0" ColumnDefinitions="130,160,80,60,*" Height="30">
+                <Grid Background="#F3F3F3" Margin="0" ColumnDefinitions="110,120,130,68,52,*" Height="30">
                     <TextBlock Grid.Column="0" Text="Driver" FontWeight="SemiBold" VerticalAlignment="Center" Margin="12,0" />
-                    <TextBlock Grid.Column="1" Text="Faculty" FontWeight="SemiBold" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="2" Text="Departs" FontWeight="SemiBold" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="3" Text="Seats" FontWeight="SemiBold" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="4" Text="Cost" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Text="Pickup" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="2" Text="Faculty" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="3" Text="Departs" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="4" Text="Seats" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="5" Text="Cost" FontWeight="SemiBold" VerticalAlignment="Center" />
                 </Grid>
                 <ListBox x:Name="lvRides" Grid.Row="1">
                     <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="m:RideRow">
-                            <Grid ColumnDefinitions="118,160,80,60,*">
-                                <TextBlock Grid.Column="0" Text="{Binding Driver}" />
-                                <TextBlock Grid.Column="1" Text="{Binding Faculty}" />
-                                <TextBlock Grid.Column="2" Text="{Binding Departs}" />
-                                <TextBlock Grid.Column="3" Text="{Binding Seats}" />
-                                <TextBlock Grid.Column="4" Text="{Binding Cost}" />
-                            </Grid>
+                            <StackPanel Spacing="2" Margin="0,2">
+                                <Grid ColumnDefinitions="98,120,130,68,52,*">
+                                    <TextBlock Grid.Column="0" Text="{Binding Driver}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Pickup}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Grid.Column="2" Text="{Binding Faculty}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Grid.Column="3" Text="{Binding Departs}" />
+                                    <TextBlock Grid.Column="4" Text="{Binding Seats}" />
+                                    <TextBlock Grid.Column="5" Text="{Binding Cost}" />
+                                </Grid>
+                                <TextBlock Text="{Binding DriverProfileSummary}"
+                                           IsVisible="{Binding HasDriverProfile}"
+                                           Foreground="#228B5E" FontSize="11.5"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>

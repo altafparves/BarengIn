@@ -120,11 +120,20 @@ public sealed class UserRepository
     /// Returns null if the NIM or password is wrong.
     /// </summary>
     public User? Authenticate(string ktmNumber, string password) =>
-        Authenticate(ktmNumber, password, out _, out _, out _);
+        Authenticate(ktmNumber, password, null, out _, out _, out _);
 
     public User? Authenticate(
         string ktmNumber,
         string password,
+        out string facultyName,
+        out string hobbies,
+        out string bio) =>
+        Authenticate(ktmNumber, password, null, out facultyName, out hobbies, out bio);
+
+    public User? Authenticate(
+        string ktmNumber,
+        string password,
+        string? selectedRole,
         out string facultyName,
         out string hobbies,
         out string bio)
@@ -158,7 +167,7 @@ public sealed class UserRepository
         string phone = r.GetString(2);
         string hash = r.GetString(3);
         string niu = r.GetString(4);
-        string role = r.GetString(5);
+        string dbRole = r.GetString(5);
         string address = r.GetString(6);
         string license = r.GetString(7);
         string verificationStatus = r.GetString(8);
@@ -172,10 +181,12 @@ public sealed class UserRepository
         hobbies = loadedHobbies;
         bio = loadedBio;
 
+        string effectiveRole = !string.IsNullOrWhiteSpace(selectedRole) ? selectedRole : dbRole;
+
         bool isVerified = !verificationStatus.Equals("unverified", StringComparison.OrdinalIgnoreCase)
                        && !verificationStatus.Equals("rejected", StringComparison.OrdinalIgnoreCase);
 
-        User user = BuildUserForRole(niu, name, email, hash, phone, role, address, license, isVerified);
+        User user = BuildUserForRole(niu, name, email, hash, phone, effectiveRole, address, license, isVerified);
         if (!string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(phone))
         {
             user.UpdateProfile(name, phone, bio);

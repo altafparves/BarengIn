@@ -272,6 +272,19 @@ public class RouteApiServiceTests
         Assert.Equal(0.72, estimate.Co2SavedKg, 2);
     }
 
+    [Fact]
+    public void SearchLocalPlaceSuggestions_MatchesPogungAndJakalQueries()
+    {
+        var pogungMatches = RouteApiService.SearchLocalPlaceSuggestions("pogu", maxResults: 5);
+        Assert.NotEmpty(pogungMatches);
+        Assert.Contains(pogungMatches, p => p.Title.Contains("Pogung Lor", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(pogungMatches, p => p.Title.Contains("Pogung Kidul", StringComparison.OrdinalIgnoreCase));
+
+        var jakalMatches = RouteApiService.SearchLocalPlaceSuggestions("jakal km 5", maxResults: 5);
+        Assert.NotEmpty(jakalMatches);
+        Assert.Contains(jakalMatches, p => p.Title.Contains("Jakal Km 5", StringComparison.OrdinalIgnoreCase));
+    }
+
     private static void AssertFallback(RouteEstimate estimate)
     {
         Assert.False(estimate.IsLiveApi);

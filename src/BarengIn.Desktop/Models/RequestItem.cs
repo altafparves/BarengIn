@@ -13,7 +13,10 @@ public class RequestItem : INotifyPropertyChanged
         Guid? requestId = null,
         int dbRequestId = 0,
         int dbRideId = 0,
-        string initialStatus = "Pending")
+        string initialStatus = "Pending",
+        string passengerNim = "",
+        string hobbies = "",
+        string bio = "")
     {
         Passenger = passenger;
         Pickup = pickup;
@@ -22,6 +25,9 @@ public class RequestItem : INotifyPropertyChanged
         DbRequestId = dbRequestId;
         DbRideId = dbRideId;
         status = string.IsNullOrWhiteSpace(initialStatus) ? "Pending" : initialStatus;
+        PassengerNim = passengerNim;
+        Hobbies = hobbies;
+        Bio = bio;
     }
 
     public Guid RequestId { get; }
@@ -30,6 +36,32 @@ public class RequestItem : INotifyPropertyChanged
     public string Passenger { get; }
     public string Pickup { get; }
     public string Faculty { get; }
+    public string PassengerNim { get; }
+    public string Hobbies { get; }
+    public string Bio { get; }
+
+    public string ProfileSummary
+    {
+        get
+        {
+            var parts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(PassengerNim))
+            {
+                parts.Add($"NIM: {PassengerNim}");
+            }
+            if (!string.IsNullOrWhiteSpace(Hobbies))
+            {
+                parts.Add($"Hobbies: {Hobbies}");
+            }
+            if (!string.IsNullOrWhiteSpace(Bio))
+            {
+                parts.Add($"\"{Bio}\"");
+            }
+            return string.Join("  ·  ", parts);
+        }
+    }
+
+    public bool HasProfileSummary => !string.IsNullOrWhiteSpace(ProfileSummary);
 
     public string Status
     {

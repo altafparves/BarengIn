@@ -2,43 +2,64 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="BarengIn.Desktop.Views.ProfileWindow"
         Title="BarengIn - Profile"
-        Width="420" Height="560"
+        Width="440" Height="640"
         MinWidth="400" MinHeight="520"
         CanResize="True"
         WindowStartupLocation="CenterScreen"
         Background="White">
 
-    <StackPanel Margin="24" Spacing="6">
-        <Grid ColumnDefinitions="Auto,16,*" Margin="0,0,0,10">
-            <Border Grid.Column="0" Width="64" Height="64" CornerRadius="32" Background="#228B5E">
-                <TextBlock x:Name="lblInitials" Foreground="White" FontSize="24" FontWeight="Bold"
-                           HorizontalAlignment="Center" VerticalAlignment="Center" />
-            </Border>
-            <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
-                <TextBlock x:Name="lblName" Classes="heading" />
-                <TextBlock x:Name="lblNimRole" Classes="muted" />
-                <Border x:Name="badgeStatus" HorizontalAlignment="Left" CornerRadius="10" Padding="10,2"
-                        Margin="0,4,0,0">
-                    <TextBlock x:Name="lblStatus" FontSize="12" FontWeight="SemiBold" />
+    <ScrollViewer>
+        <StackPanel Margin="24" Spacing="6">
+            <Grid ColumnDefinitions="Auto,16,*" Margin="0,0,0,8">
+                <Border Grid.Column="0" Width="64" Height="64" CornerRadius="32" Background="#228B5E">
+                    <TextBlock x:Name="lblInitials" Foreground="White" FontSize="24" FontWeight="Bold"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
-            </StackPanel>
-        </Grid>
+                <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
+                    <TextBlock x:Name="lblName" Classes="heading" />
+                    <TextBlock x:Name="lblNimRole" Classes="muted" />
+                    <Border x:Name="badgeStatus" HorizontalAlignment="Left" CornerRadius="10" Padding="10,2"
+                            Margin="0,4,0,0">
+                        <TextBlock x:Name="lblStatus" FontSize="12" FontWeight="SemiBold" />
+                    </Border>
+                </StackPanel>
+            </Grid>
 
-        <TextBlock Text="Faculty :" />
-        <ComboBox x:Name="cbFaculty" HorizontalAlignment="Stretch" />
+            <Border Background="#F7FAF8" BorderBrush="#D7E6DD" BorderThickness="1" CornerRadius="6"
+                    Padding="12,10" Margin="0,0,0,6">
+                <Grid ColumnDefinitions="105,*" RowDefinitions="Auto,6,Auto,6,Auto,6,Auto,6,Auto">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Classes="muted" Text="Full name :" FontSize="12" />
+                    <TextBlock x:Name="lblFullNameValue" Grid.Row="0" Grid.Column="1" FontWeight="SemiBold" FontSize="12" />
 
-        <TextBlock Text="Hobbies :" Margin="0,8,0,0" />
-        <TextBox x:Name="tbHobbies" PlaceholderText="e.g. badminton, coffee, indie music" />
+                    <TextBlock Grid.Row="2" Grid.Column="0" Classes="muted" Text="Student ID (NIM) :" FontSize="12" />
+                    <TextBlock x:Name="lblNimValue" Grid.Row="2" Grid.Column="1" FontWeight="SemiBold" FontSize="12" />
 
-        <TextBlock Text="Short bio :" Margin="0,8,0,0" />
-        <TextBox x:Name="tbBio" AcceptsReturn="True" TextWrapping="Wrap" Height="110"
-                 PlaceholderText="Tell your ride mates a bit about yourself" />
+                    <TextBlock Grid.Row="4" Grid.Column="0" Classes="muted" Text="Faculty :" FontSize="12" />
+                    <TextBlock x:Name="lblFacultyValue" Grid.Row="4" Grid.Column="1" FontWeight="SemiBold" FontSize="12" />
 
-        <Grid ColumnDefinitions="*,12,*" Margin="0,18,0,0">
-            <Button x:Name="btnSave" Grid.Column="0" Classes="primary" Content="Save"
-                    HorizontalAlignment="Stretch" Height="40" Click="btnSave_Click" />
-            <Button x:Name="btnBack" Grid.Column="2" Classes="secondary" Content="Back"
-                    HorizontalAlignment="Stretch" Height="40" Click="btnBack_Click" />
-        </Grid>
-    </StackPanel>
+                    <TextBlock Grid.Row="6" Grid.Column="0" Classes="muted" Text="Email :" FontSize="12" />
+                    <TextBlock x:Name="lblEmailValue" Grid.Row="6" Grid.Column="1" FontSize="12" TextTrimming="CharacterEllipsis" />
+
+                    <TextBlock Grid.Row="8" Grid.Column="0" Classes="muted" Text="Phone :" FontSize="12" />
+                    <TextBlock x:Name="lblPhoneValue" Grid.Row="8" Grid.Column="1" FontSize="12" />
+                </Grid>
+            </Border>
+
+            <ComboBox x:Name="cbFaculty" IsVisible="False" IsEnabled="False" HorizontalAlignment="Stretch" />
+
+            <TextBlock Text="Hobbies :" Margin="0,4,0,0" />
+            <TextBox x:Name="tbHobbies" PlaceholderText="e.g. badminton, coffee, indie music" />
+
+            <TextBlock Text="Short bio :" Margin="0,6,0,0" />
+            <TextBox x:Name="tbBio" AcceptsReturn="True" TextWrapping="Wrap" Height="100"
+                     PlaceholderText="Tell your ride mates a bit about yourself" />
+
+            <Grid ColumnDefinitions="*,12,*" Margin="0,14,0,0">
+                <Button x:Name="btnSave" Grid.Column="0" Classes="primary" Content="Save"
+                        HorizontalAlignment="Stretch" Height="40" Click="btnSave_Click" />
+                <Button x:Name="btnBack" Grid.Column="2" Classes="secondary" Content="Back"
+                        HorizontalAlignment="Stretch" Height="40" Click="btnBack_Click" />
+            </Grid>
+        </StackPanel>
+    </ScrollViewer>
 </Window>

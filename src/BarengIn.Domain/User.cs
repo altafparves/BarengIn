@@ -58,6 +58,15 @@ public abstract class User
     /// <summary>Full name, exposed read-only from the protected fullName field.</summary>
     public string FullName => fullName;
 
+    /// <summary>Email address, exposed read-only from the protected email field.</summary>
+    public string Email => email;
+
+    /// <summary>Phone number, exposed read-only from the protected phoneNumber field.</summary>
+    public string PhoneNumber => phoneNumber;
+
+    /// <summary>Hobbies, exposed read-only from the protected hobbies field.</summary>
+    public string Hobbies => hobbies;
+
     /// <summary>Short bio, exposed read-only from the protected bio field.</summary>
     public string Bio => bio;
 
