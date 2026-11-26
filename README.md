@@ -47,17 +47,38 @@ BarengIn
 ## Tech Stack
 | Layer | Technology |
 |---|---|
-| Platform | Platform (web vs. mobile, decision pending) |
-| Backend | C#, ASP.NET Core 8 Web API |
-| Database | PostgreSQL, Entity Framework Core |
-| Real time | SignalR |
-| Frontend | TBD, pending platform decision |
+| Desktop UI | C# (.NET 9), Avalonia UI 12.1.4 (Cross-Platform & Self-Contained Windows x64 `.exe`) |
+| Architecture | Domain-Driven Layered Architecture (`BarengIn.Domain`, `BarengIn.Infrastructure`, `BarengIn.Desktop`) |
+| Database | PostgreSQL 14+ with `Npgsql` (`docs/database/schema.sql`) + automatic zero-setup offline fallback |
+| Web API Service | OpenStreetMap Nominatim Geocoding REST API + OSRM Driving Route REST API (`HttpClient` + `System.Text.Json`) |
+| Automated Tests | xUnit (`BarengIn.Domain.Tests` & `BarengIn.Desktop.Tests` — headless Avalonia UI + live PostgreSQL + REST API suite) |
 
 ## Similar Apps
 Gojek/GoCar, Grab, and BlaBlaCar are the closest comparisons. BarengIn differentiates on schedule based matching, social profiles, and a campus specific climate impact dashboard.
 
-## Project Status
-In development. Module 1 (concept, repo setup, GitHub Page) is in progress, with architecture and API design next.
+## Module 10 — Minimum Viable Product (Download, Quick Start & Testing)
+
+### 1. Download the Self-Contained Windows `.exe` Package
+- **GitHub Release (`v0.1.0-mvp`):** [Download `BarengIn-MVP-win-x64.zip`](https://github.com/altafparves/BarengIn/releases/tag/v0.1.0-mvp)
+- Extract `BarengIn-MVP-win-x64.zip` and double-click **`BarengIn.Desktop.exe`**. No .NET SDK, Visual Studio, or database installation is required to test the application in **Offline Mode**.
+- For full step-by-step Windows testing instructions, see [**`docs/WINDOWS-GUIDE.md`**](docs/WINDOWS-GUIDE.md).
+
+### 2. Declared Administrator Credentials (Admin Dashboard)
+To test the **Admin Dashboard** (KPI cards, KTM Verification queue, User Suspension, $\text{CO}_2$ Leaderboard, and 30-day Campus Sustainability Report):
+- **Role:** `Admin`
+- **Student ID (NIM) or UGM Email:** `admin@ugm.ac.id` (or `ADMIN/01` or `24/536741`)
+- **Password:** `admin123`
+*(Regular student accounts cannot log in with the `Admin` role.)*
+
+### 3. Module 10 Documentation & Deliverables
+| Deliverable | Location |
+|---|---|
+| **Windows Test Guide (Quick Start)** | [`docs/WINDOWS-GUIDE.md`](docs/WINDOWS-GUIDE.md) |
+| **Module 10 Complete Guide (DB, Packaging & 6-Screen User Guide)** | [`docs/module-10/README.md`](docs/module-10/README.md) |
+| **Lab 10.2 Black Box Testing Report (32 Test Cases + Screenshots)** | [`docs/module-10/BLACK_BOX_TESTING.md`](docs/module-10/BLACK_BOX_TESTING.md) |
+| **Module 10 Homework Worksheet (`.pdf` & `.docx`)** | [`docs/module-10/WORKSHEET HOMEWORK 10.pdf`](docs/module-10/WORKSHEET%20HOMEWORK%2010.pdf) / [`WORKSHEET HOMEWORK 10.docx`](docs/module-10/WORKSHEET%20HOMEWORK%2010.docx) |
+| **PostgreSQL Schema (`schema.sql`)** | [`docs/database/schema.sql`](docs/database/schema.sql) |
+| **Windows Single-File Packaging Script** | [`scripts/package-windows.sh`](scripts/package-windows.sh) |
 
 ## Module 3 — Class Design
 

@@ -13,7 +13,13 @@ Keep all files together in the same folder:
 ------------------------------------------------------
 1. Extract all files from BarengIn-MVP-win-x64.zip into a folder (do not run directly inside the ZIP).
 2. Double-click BarengIn.Desktop.exe.
-3. By default, appsettings.json contains "Password=PASSWORDHERE". When left unchanged (or if PostgreSQL is unreachable), BarengIn automatically runs in offline mode so you can explore Login, Register, Passenger Home, Driver Dashboard, and Profile immediately.
+3. By default, appsettings.json contains "Password=PASSWORDHERE". When left unchanged (or if PostgreSQL is unreachable), BarengIn automatically runs in offline mode so you can explore all 6 screens (Login, Register, Passenger Home, Driver Dashboard, Profile, and Admin Dashboard) immediately.
+
+   Declared Admin Login Credentials (for testing the Admin Dashboard):
+     - Role:         Admin
+     - NIM or Email: admin@ugm.ac.id  (or ADMIN/01 or 24/536741)
+     - Password:     admin123
+   (Regular registered student accounts are blocked from logging in as Admin.)
 
 3. Option B: Full PostgreSQL Setup
 ----------------------------------
