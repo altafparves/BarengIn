@@ -454,6 +454,12 @@ seed/*.local.json
 # macOS
 .DS_Store
 
+# Local AI / editor assistant directories
+.claude/
+.superpowers/
+.gemini/
+.agents/
+
 # Windows release bundles
 dist/
 BarengIn-MVP-win-x64.zip
