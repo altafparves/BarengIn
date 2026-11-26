@@ -61,17 +61,25 @@ Do not change `appsettings.json`.
 
 Do each step. Compare the result with the "Expected result" column.
 
+> [!NOTE]
+> **Declared Admin Credentials (for testing the Admin Dashboard):**
+> - **Role:** `Admin`
+> - **NIM or Email:** `admin@ugm.ac.id` (or `ADMIN/01` or `24/536741`)
+> - **Password:** `admin123`
+> *(Normal registered student accounts cannot log in as Admin.)*
+
 | # | Screen | Action | Expected result |
 |---|---|---|---|
-| 1 | Register | Enter your details. Click **Register**. | The app accepts the account. |
-| 2 | Login | Enter your email and password. Click **Login**. | You see the Home screen. |
-| 3 | Passenger Home | Enter a start and an end place. Click **Find Rides**. | You see a list of rides. |
+| 1 | Register | Enter your details. Click **Register**. | The app accepts the account (status starts as **KTM pending**). |
+| 2 | Login | Enter your **NIM or Email** and password. Click **Login**. | You see the Home screen. |
+| 3 | Passenger Home | Enter a start and an end place. Click **Find Rides**. | You see a list of rides with driver social profiles. |
 | 4 | Route preview | Look at the distance, time, and CO2 values. | The values show on the screen. |
 | 5 | Driver Dashboard | Open the Driver Dashboard. | You see the trips and the requests. |
 | 6 | Post Trip | Enter trip data. Click **Post Trip**. | The trip shows in the list. |
 | 7 | Requests | Approve one request. Reject another request. | The status changes. |
-| 8 | Profile | Change your name. Save. | The new name shows. |
-| 9 | Logout | Click **Logout**. | You see the Login screen. |
+| 8 | Admin Dashboard | Log in with Role = **Admin** and `admin@ugm.ac.id` / `admin123`. | You see KPI cards, the KTM Verification queue, and the CO2 Leaderboard. |
+| 9 | Profile | Update hobbies and bio. Click **Save**. | The updated profile saves. |
+| 10 | Logout | Click **Logout**. | You see the Login screen. |
 
 ## 6. Troubleshooting
 

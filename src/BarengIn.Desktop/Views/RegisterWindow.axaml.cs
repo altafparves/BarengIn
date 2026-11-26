@@ -63,7 +63,8 @@ public partial class RegisterWindow : Window
                 tbPassword.Text!,
                 nim,
                 faculty,
-                role);
+                role,
+                ktmFile);
             if (!ok)
             {
                 await MessageBox.Show(this, "Registration failed.");

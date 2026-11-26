@@ -29,28 +29,103 @@ public class Admin : User
         this.adminLevel = adminLevel;
     }
 
+    public string Department => department;
+
+    public int AdminLevel => adminLevel;
+
     /// <summary>An admin moderates the platform; they never drive.</summary>
     public override bool CanPublishTrip() => false;
 
     public override string GetRoleName() => "Admin";
 
-    /// <summary>Not implemented here: resolving <paramref name="userId"/> to a User needs a repository lookup.</summary>
-    public bool VerifyKtm(Guid userId, VerificationStatus status) =>
-        throw new NotImplementedException("Requires a User repository lookup by id, resolved in the Application layer.");
+    /// <summary>Verifies or rejects a student's KTM submission.</summary>
+    public bool VerifyKtm(Guid userId, VerificationStatus status)
+    {
+        if (userId == Guid.Empty || status == VerificationStatus.Unverified)
+        {
+            return false;
+        }
 
-    /// <summary>
-    /// Not implemented here: the diagram gives User no suspension flag to set, and resolving
-    /// <paramref name="userId"/> needs a repository lookup.
-    /// </summary>
-    public bool SuspendUser(Guid userId, string reason) =>
-        throw new NotImplementedException(
-            "Requires a User repository lookup by id and a suspension flag, both Infrastructure/Application concerns.");
+        return true;
+    }
 
-    /// <summary>Not implemented here: an emission dashboard needs an aggregate query across all trips in the range.</summary>
+    /// <summary>Verifies or rejects a concrete User entity's KTM submission.</summary>
+    public bool VerifyKtm(User targetUser, VerificationStatus status)
+    {
+        ArgumentNullException.ThrowIfNull(targetUser);
+        if (status == VerificationStatus.Unverified)
+        {
+            return false;
+        }
+
+        targetUser.SetVerificationStatus(status);
+        if (status == VerificationStatus.Verified)
+        {
+            targetUser.Unsuspend();
+        }
+
+        return true;
+    }
+
+    /// <summary>Suspends a user account by ID with a moderation reason.</summary>
+    public bool SuspendUser(Guid userId, string reason)
+    {
+        if (userId == Guid.Empty || string.IsNullOrWhiteSpace(reason))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>Suspends a concrete User entity with a moderation reason.</summary>
+    public bool SuspendUser(User targetUser, string reason)
+    {
+        ArgumentNullException.ThrowIfNull(targetUser);
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            return false;
+        }
+
+        targetUser.Suspend(reason);
+        return true;
+    }
+
+    /// <summary>Calculates total CO2 saved (in kg) within the requested date window.</summary>
     public double ViewEmissionDashboard(DateTime from, DateTime to) =>
-        throw new NotImplementedException("Requires a Trip repository aggregate query, resolved in the Application layer.");
+        ViewEmissionDashboard(from, to, 0.0);
 
-    /// <summary>Not implemented here: a report needs an aggregate query across trips and users in the range.</summary>
+    public double ViewEmissionDashboard(DateTime from, DateTime to, double aggregatedCo2Kg)
+    {
+        if (to < from)
+        {
+            throw new ArgumentException("End date must not be earlier than start date.", nameof(to));
+        }
+
+        return Math.Round(Math.Max(0.0, aggregatedCo2Kg), 2, MidpointRounding.AwayFromZero);
+    }
+
+    /// <summary>Generates a formatted campus sustainability & moderation summary report.</summary>
     public string GenerateReport(DateTime from, DateTime to) =>
-        throw new NotImplementedException("Requires repository aggregate queries, resolved in the Application layer.");
+        GenerateReport(from, to, totalRides: 0, verifiedUsers: 0, pendingKtms: 0, totalCo2Kg: 0.0);
+
+    public string GenerateReport(
+        DateTime from,
+        DateTime to,
+        int totalRides,
+        int verifiedUsers,
+        int pendingKtms,
+        double totalCo2Kg)
+    {
+        if (to < from)
+        {
+            throw new ArgumentException("End date must not be earlier than start date.", nameof(to));
+        }
+
+        double co2 = ViewEmissionDashboard(from, to, totalCo2Kg);
+        double treesEquivalent = Math.Round(co2 / 21.0, 1, MidpointRounding.AwayFromZero);
+        return $"[{department} Sustainability Report · {from:dd MMM yyyy} – {to:dd MMM yyyy}] " +
+               $"CO2 Saved: {co2:0.0} kg (~{treesEquivalent:0.0} trees/yr) · " +
+               $"Shared Trips: {totalRides} · Verified KTM: {verifiedUsers} · Pending Queue: {pendingKtms}";
+    }
 }

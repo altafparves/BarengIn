@@ -280,6 +280,67 @@ CREATE INDEX idx_rating_ride_id            ON rating(ride_id);
 CREATE INDEX idx_rating_rated_id           ON rating(rated_id);
 
 -- ---------------------------------------------------------------
+-- SEED DEFAULT FACULTIES & DECLARED BARENGIN ADMINISTRATORS
+-- Password for seeded admin accounts: admin123
+-- ---------------------------------------------------------------
+INSERT INTO faculty (name, short_name, latitude, longitude) VALUES
+    ('Engineering (FT)', 'FT', -7.7654, 110.3723),
+    ('MIPA', 'FMIPA', -7.7672, 110.3762),
+    ('Economics and Business (FEB)', 'FEB', -7.7706, 110.3792),
+    ('Medicine', 'FK-KMK', -7.7689, 110.3736),
+    ('Social and Political Sciences', 'FISIPOL', -7.7701, 110.3774),
+    ('Fakultas Biologi', 'Biologi', -7.7655, 110.3768),
+    ('Fakultas Ekonomika dan Bisnis (FEB)', 'FEB', -7.7708, 110.3794),
+    ('Fakultas Farmasi', 'Farmasi', -7.7679, 110.3752),
+    ('Fakultas Filsafat', 'Filsafat', -7.7715, 110.3798),
+    ('Fakultas Geografi', 'Geografi', -7.7664, 110.3766),
+    ('Fakultas Hukum', 'Hukum', -7.7709, 110.3806),
+    ('Fakultas Ilmu Budaya (FIB)', 'FIB', -7.7718, 110.3782),
+    ('Fakultas Ilmu Sosial dan Ilmu Politik (FISIPOL)', 'FISIPOL', -7.7702, 110.3788),
+    ('Fakultas Kedokteran, Kesehatan Masyarakat, dan Keperawatan (FK-KMK)', 'FK-KMK', -7.7691, 110.3738),
+    ('Fakultas Kedokteran Gigi (FKG)', 'FKG', -7.7696, 110.3749),
+    ('Fakultas Kedokteran Hewan (FKH)', 'FKH', -7.7681, 110.3834),
+    ('Fakultas Kehutanan', 'Kehutanan', -7.7674, 110.3805),
+    ('Fakultas Matematika dan Ilmu Pengetahuan Alam (FMIPA)', 'FMIPA', -7.7670, 110.3764),
+    ('Fakultas Pertanian', 'Pertanian', -7.7695, 110.3818),
+    ('Fakultas Peternakan', 'Peternakan', -7.7672, 110.3852),
+    ('Fakultas Psikologi', 'Psikologi', -7.7724, 110.3789),
+    ('Fakultas Teknik (FT)', 'FT', -7.7653, 110.3725),
+    ('Fakultas Teknologi Pertanian (FTP)', 'FTP', -7.7688, 110.3802),
+    ('Sekolah Vokasi (SV)', 'SV', -7.7748, 110.3742),
+    ('Sekolah Pascasarjana', 'Pascasarjana', -7.7644, 110.3755),
+    ('Balairung UGM (Gedung Pusat)', 'Balairung', -7.7686, 110.3785),
+    ('Grha Sabha Pramana (GSP)', 'GSP', -7.7704, 110.3777),
+    ('RSUP Dr. Sardjito', 'Sardjito', -7.7686, 110.3732),
+    ('Rumah Sakit Akademik (RSA) UGM', 'RSA UGM', -7.7426, 110.3508),
+    ('Perpustakaan Pusat UGM', 'Perpusat', -7.7697, 110.3782),
+    ('Masjid Kampus UGM (Maskam)', 'Maskam', -7.7732, 110.3797),
+    ('Gelanggang Inovasi dan Kreativitas (GIK)', 'GIK', -7.7745, 110.3746),
+    ('Wisdom Park UGM', 'Wisdom Park', -7.7712, 110.3822),
+    ('Stadion Pancasila UGM', 'Pancasila', -7.7705, 110.3831),
+    ('Asrama Mahasiswa (Darmaputera / Ratnaningsih)', 'Asrama UGM', -7.7629, 110.3795)
+ON CONFLICT (name) DO NOTHING;
+
+INSERT INTO users (faculty_id, full_name, email, phone_number, password_hash, ktm_number, role, verification_status)
+VALUES (
+    (SELECT faculty_id FROM faculty WHERE name = 'Engineering (FT)' LIMIT 1),
+    'BarengIn Campus Admin',
+    'admin@ugm.ac.id',
+    '081100000001',
+    '$2a$11$0fG3q1Z6p3B0v1xY9yE8O.h8Z5X7W9V1U3T5S7R9Q1P3O5N7M9L1K',
+    'ADMIN/01',
+    'admin',
+    'verified'
+)
+ON CONFLICT (ktm_number) DO NOTHING;
+
+INSERT INTO admin (user_id, department, admin_level)
+SELECT user_id, 'DTETI', 'super_admin'
+FROM users
+WHERE ktm_number = 'ADMIN/01'
+ON CONFLICT (user_id) DO NOTHING;
+
+-- ---------------------------------------------------------------
 -- VERIFY (run manually after the script finishes)
 --   \dt          -> should list all 15 tables
 --   \d ride      -> ride's columns + its 3 foreign keys

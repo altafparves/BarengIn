@@ -57,45 +57,67 @@ public class ScreenshotTests
             Environment.GetEnvironmentVariable("BARENGIN_SCREENSHOTS") == "1",
             "Set BARENGIN_SCREENSHOTS=1 to regenerate screenshots.");
 
-        AppSession.Reset();
-        var login = new LoginWindow();
-        login.Find<TextBox>("tbUsername").Text = "24/536741";
-        login.Find<TextBox>("tbPassword").Text = "secret";
-        Shot(login, "01-login");
+        string? prevEnv = Environment.GetEnvironmentVariable("BARENGIN_DB");
+        try
+        {
+            Environment.SetEnvironmentVariable("BARENGIN_DB", "Host=localhost;Port=5432;Database=barengin;Username=postgres;Password=PASSWORDHERE");
+            BarengIn.Desktop.AppDb.ResetAvailabilityCache();
 
-        var register = new RegisterWindow();
-        register.Find<TextBox>("tbName").Text = "Altaf Parves";
-        register.Find<TextBox>("tbNim").Text = "24/536741";
-        Shot(register, "02-register");
+            AppSession.Reset();
+            var login = new LoginWindow();
+            login.Find<TextBox>("tbUsername").Text = "24/536741";
+            login.Find<TextBox>("tbPassword").Text = "secret";
+            Shot(login, "01-login");
 
-        AppSession.Reset();
-        AppSession.SignIn("24/536741", "Passenger");
-        AppSession.Name = "Altaf Parves";
-        var home = new HomeWindow();
-        home.Find<TextBox>("tbOrigin").Text = "Jakal Km 5";
-        home.Click("btnFind");
-        home.Find<ListBox>("lvRides").SelectedIndex = 1;
-        Shot(home, "03-passenger-home");
+            var register = new RegisterWindow();
+            register.Find<TextBox>("tbName").Text = "Altaf Parves";
+            register.Find<TextBox>("tbNim").Text = "24/536741";
+            Shot(register, "02-register");
 
-        AppSession.Reset();
-        AppSession.SignIn("24/536741", "Driver");
-        AppSession.Name = "Altaf Parves";
-        var driver = new DriverWindow();
-        driver.Show();
-        driver.Find<TextBox>("tbOrigin").Text = "Seturan";
-        driver.Click("btnPost");
-        driver.Find<TextBox>("tbOrigin").Text = "Jakal Km 5";
-        driver.Click("btnPost");
-        driver.Layout();
-        driver.FindButton("Approve").Press();
-        driver.Layout();
-        driver.FindButton("Reject").Press();
-        Shot(driver, "04-driver");
+            AppSession.Reset();
+            AppSession.SignIn("24/536741", "Passenger");
+            AppSession.Name = "Altaf Parves";
+            var home = new HomeWindow();
+            home.Show();
+            home.Find<TextBox>("tbOrigin").Text = "Jakal Km 5";
+            Dispatcher.UIThread.RunJobs();
+            home.Click("btnFind");
+            Dispatcher.UIThread.RunJobs();
+            home.Find<ListBox>("lvRides").SelectedIndex = 1;
+            Shot(home, "03-passenger-home");
 
-        AppSession.Hobbies = "badminton, coffee, indie music";
-        AppSession.Bio = "Commutes from Jakal every day. Happy to chat or ride in silence.";
-        var profile = new ProfileWindow();
-        Shot(profile, "05-profile");
+            AppSession.Reset();
+            AppSession.SignIn("24/536741", "Driver");
+            AppSession.Name = "Altaf Parves";
+            var driver = new DriverWindow();
+            driver.Show();
+            driver.Find<TextBox>("tbOrigin").Text = "Seturan";
+            driver.Click("btnPost");
+            driver.Find<TextBox>("tbOrigin").Text = "Jakal Km 5";
+            driver.Click("btnPost");
+            driver.Layout();
+            driver.FindButton("Approve").Press();
+            driver.Layout();
+            driver.FindButton("Reject").Press();
+            Shot(driver, "04-driver");
+
+            AppSession.Hobbies = "badminton, coffee, indie music";
+            AppSession.Bio = "Commutes from Jakal every day. Happy to chat or ride in silence.";
+            var profile = new ProfileWindow();
+            Shot(profile, "05-profile");
+
+            AppSession.Reset();
+            AppSession.SignIn("24/536741", "Admin");
+            AppSession.Name = "Altaf Parves";
+            var admin = new AdminWindow();
+            Shot(admin, "06-admin");
+        }
+        finally
+        {
+            AppSession.Reset();
+            Environment.SetEnvironmentVariable("BARENGIN_DB", prevEnv);
+            BarengIn.Desktop.AppDb.ResetAvailabilityCache();
+        }
     }
 
     [AvaloniaFact]
@@ -111,7 +133,7 @@ public class ScreenshotTests
 
         try
         {
-            Environment.SetEnvironmentVariable("BARENGIN_DB", null);
+            Environment.SetEnvironmentVariable("BARENGIN_DB", "Host=localhost;Port=5432;Database=barengin;Username=postgres;Password=PASSWORDHERE");
             BarengIn.Desktop.AppDb.ResetAvailabilityCache();
             BarengIn.Desktop.AppDb.RouteEstimator = (_, _, _) =>
                 Task.FromResult(new RouteEstimate(5.4, 13, 0.65, IsLiveApi: true, Source: "OSRM + Nominatim"));
@@ -138,6 +160,7 @@ public class ScreenshotTests
             var home = new HomeWindow();
             home.Show();
             home.Find<TextBox>("tbOrigin").Text = "Jakal Km 5";
+            Dispatcher.UIThread.RunJobs();
             home.Click("btnFind");
             Dispatcher.UIThread.RunJobs();
             home.Find<ListBox>("lvRides").SelectedIndex = 1;
@@ -165,6 +188,13 @@ public class ScreenshotTests
             AppSession.Bio = "Commutes from Jakal every day. Happy to chat or ride in silence.";
             var profile = new ProfileWindow();
             ShotToDir(profile, m10Dir, "05-profile");
+
+            AppSession.Reset();
+            BarengIn.Desktop.AppDb.ClearOfflineUsers();
+            AppSession.SignIn("24/536741", "Admin");
+            AppSession.Name = "Altaf Parves";
+            var admin = new AdminWindow();
+            ShotToDir(admin, m10Dir, "06-admin");
         }
         finally
         {

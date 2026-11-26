@@ -6,11 +6,11 @@ public static class RideLogic
 {
     public const double Co2PerRequest = 1.2;
 
-    private static readonly (string Driver, string Pickup, int MinutesBefore, int Seats, string Cost)[] Sample =
+    private static readonly (string Driver, string Pickup, int MinutesBefore, int Seats, string Cost, string Nim, string Hobbies, string Bio)[] Sample =
     {
-        ("Altaf", "Jakal Km 5", 30, 3, "Rp 5.000"),
-        ("Dimas", "Seturan", 45, 2, "Rp 7.000"),
-        ("Diffie", "Condongcatur", 60, 1, "Rp 6.000"),
+        ("Reza Pratama", "Jakal Km 5", 30, 3, "Rp 5.000", "24/512301/TK/58101", "badminton, indie music, coffee", "Morning commute via Jakal, chill playlist!"),
+        ("Bagas Saputra", "Seturan", 45, 2, "Rp 7.000", "24/514890/TK/58210", "photography, futsal, gaming", "Leaving on time from Seturan, helmets sanitized."),
+        ("Nadia Kusuma", "Condongcatur", 60, 1, "Rp 6.000", "24/519204/TK/58432", "podcasts, UI design, cycling", "Quiet morning ride from Concat straight to FT."),
     };
 
     public static string Departure(TimeSpan classStart, int minutesBefore)
@@ -26,7 +26,17 @@ public static class RideLogic
         var rides = new List<RideRow>();
         foreach (var s in Sample)
         {
-            rides.Add(new RideRow(s.Driver, faculty, Departure(classStart, s.MinutesBefore), s.Seats, s.Cost, 0, s.Pickup));
+            rides.Add(new RideRow(
+                s.Driver,
+                faculty,
+                Departure(classStart, s.MinutesBefore),
+                s.Seats,
+                s.Cost,
+                0,
+                s.Pickup,
+                s.Nim,
+                s.Hobbies,
+                s.Bio));
         }
         return rides;
     }

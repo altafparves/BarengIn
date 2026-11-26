@@ -1,0 +1,191 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:m="using:BarengIn.Desktop.Models"
+        x:Class="BarengIn.Desktop.Views.AdminWindow"
+        Title="BarengIn - Campus Admin &amp; Sustainability Dashboard"
+        Width="1060" Height="700"
+        MinWidth="900" MinHeight="580"
+        CanResize="True"
+        WindowStartupLocation="CenterScreen"
+        Background="#F4F8F6">
+
+    <Grid Margin="20" RowDefinitions="Auto,12,Auto,12,Auto,12,*,12,Auto">
+        <!-- Header Card -->
+        <Border Grid.Row="0" Classes="card" Padding="18,12">
+            <Grid ColumnDefinitions="*,Auto,10,Auto">
+                <StackPanel Spacing="2" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <TextBlock x:Name="lblWelcome" Classes="heading" VerticalAlignment="Center" />
+                        <Border Classes="pill" VerticalAlignment="Center">
+                            <TextBlock x:Name="lblDepartmentBadge" Text="DTETI · Campus Sustainability Admin"
+                                       FontSize="11.5" FontWeight="SemiBold" Foreground="#14573B" />
+                        </Border>
+                    </StackPanel>
+                    <TextBlock Classes="muted" FontSize="12"
+                               Text="Verify student KTM cards, moderate accounts, and monitor campus-wide CO2 emissions avoided." />
+                </StackPanel>
+                <Button x:Name="btnRefresh" Grid.Column="1" Classes="secondary" Content="Refresh"
+                        Width="92" Height="36" VerticalAlignment="Center" Click="btnRefresh_Click" />
+                <Button x:Name="btnProfile" Grid.Column="3" Classes="secondary" Content="Profile"
+                        Width="92" Height="36" VerticalAlignment="Center" Click="btnProfile_Click" />
+            </Grid>
+        </Border>
+
+        <!-- 4 KPI Stat Cards -->
+        <Grid Grid.Row="2" ColumnDefinitions="*,12,*,12,*,12,*">
+            <Border Grid.Column="0" Classes="kpi" Background="#E8F6EE" BorderBrush="#BFE3CE">
+                <StackPanel Spacing="3">
+                    <TextBlock Text="CAMPUS CO2 SAVED" FontSize="10.5" FontWeight="Bold" Foreground="#1B6F4B" />
+                    <TextBlock x:Name="lblTotalCo2" FontSize="22" FontWeight="Bold" Foreground="#14573B" Text="0.0 kg" />
+                    <TextBlock x:Name="lblTreesEquivalent" Classes="muted" FontSize="11" Text="~0.0 trees/year equivalent" />
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="2" Classes="kpi">
+                <StackPanel Spacing="3">
+                    <TextBlock Text="SHARED CAMPUS RIDES" FontSize="10.5" FontWeight="Bold" Classes="muted" />
+                    <TextBlock x:Name="lblTotalRides" FontSize="22" FontWeight="Bold" Foreground="#1D352B" Text="0 trips" />
+                    <TextBlock Classes="muted" FontSize="11" Text="Single-occupancy trips avoided" />
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="4" Classes="kpi">
+                <StackPanel Spacing="3">
+                    <TextBlock Text="PENDING KTM QUEUE" FontSize="10.5" FontWeight="Bold" Foreground="#9A6100" />
+                    <TextBlock x:Name="lblPendingKtms" FontSize="22" FontWeight="Bold" Foreground="#7A4B00" Text="0 pending" />
+                    <TextBlock Classes="muted" FontSize="11" Text="Awaiting student ID review" />
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="6" Classes="kpi">
+                <StackPanel Spacing="3">
+                    <TextBlock Text="VERIFIED STUDENTS" FontSize="10.5" FontWeight="Bold" Classes="muted" />
+                    <TextBlock x:Name="lblVerifiedUsers" FontSize="22" FontWeight="Bold" Foreground="#14573B" Text="0 verified" />
+                    <TextBlock Classes="muted" FontSize="11" Text="Active trusted UGM accounts" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Report Summary Banner -->
+        <Border Grid.Row="4" Background="#E9F6EF" BorderBrush="#C2E2D0" BorderThickness="1"
+                CornerRadius="8" Padding="14,8">
+            <Grid ColumnDefinitions="*,12,Auto">
+                <TextBlock x:Name="lblReportSummary" Grid.Column="0" Foreground="#14573B" FontWeight="Medium"
+                           FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap" />
+                <Button x:Name="btnGenerateReport" Grid.Column="2" Classes="primary" Content="Generate Report"
+                        Width="140" Height="32" Click="btnGenerateReport_Click" />
+            </Grid>
+        </Border>
+
+        <!-- Split Workspace: Left = KTM & User Moderation, Right = CO2 Leaderboard -->
+        <Grid Grid.Row="6" ColumnDefinitions="1.35*,16,0.95*">
+            <!-- Left: KTM Verification & User Moderation -->
+            <Border Grid.Column="0" Classes="card" Padding="16,14">
+                <Grid RowDefinitions="Auto,8,*">
+                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+                        <StackPanel>
+                            <TextBlock Classes="section" Text="KTM verification &amp; student moderation" Margin="0" />
+                            <TextBlock Classes="muted" FontSize="11.5"
+                                       Text="Approve or reject student IDs (Admin.VerifyKtm) or suspend accounts (Admin.SuspendUser)." />
+                        </StackPanel>
+                    </Grid>
+
+                    <Border Grid.Row="2" BorderBrush="#DFECE5" BorderThickness="1" CornerRadius="8" ClipToBounds="True">
+                        <ListBox x:Name="lvUsers" Background="White">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="m:AdminUserItem">
+                                    <Border BorderBrush="#EEF4F1" BorderThickness="0,0,0,1" Padding="6,8">
+                                        <Grid ColumnDefinitions="36,10,*,10,Auto">
+                                            <Border Grid.Column="0" Width="36" Height="36" CornerRadius="18"
+                                                    Background="#E6F5EE" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Initials}" FontWeight="Bold" FontSize="13"
+                                                           Foreground="#14573B" HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center" />
+                                            </Border>
+
+                                            <StackPanel Grid.Column="2" Spacing="2" VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <TextBlock Text="{Binding FullName}" FontWeight="Bold" Foreground="#1D352B" />
+                                                    <Border Classes="pill" Padding="8,1">
+                                                        <TextBlock Text="{Binding Status}" FontSize="11" FontWeight="SemiBold"
+                                                                   Foreground="#14573B" />
+                                                    </Border>
+                                                </StackPanel>
+                                                <TextBlock Text="{Binding RoleFacultySummary}" Classes="muted" FontSize="11.5" />
+                                                <TextBlock Text="{Binding KtmSummary}" Foreground="#228B5E" FontSize="11" />
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="6"
+                                                        VerticalAlignment="Center">
+                                                <Button Classes="primary" Content="Verify KTM" Width="88" Height="30"
+                                                        FontSize="12" IsVisible="{Binding IsPending}"
+                                                        Click="btnVerifyKtm_Click" />
+                                                <Button Classes="secondary" Content="Reject" Width="68" Height="30"
+                                                        FontSize="12" IsVisible="{Binding IsPending}"
+                                                        Click="btnRejectKtm_Click" />
+                                                <Button Classes="danger" Content="Suspend" Width="76" Height="30"
+                                                        FontSize="12" IsVisible="{Binding CanSuspend}"
+                                                        Click="btnSuspendUser_Click" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- Right: Campus CO2 Leaderboard -->
+            <Border Grid.Column="2" Classes="card" Padding="16,14">
+                <Grid RowDefinitions="Auto,8,*">
+                    <StackPanel Grid.Row="0">
+                        <TextBlock Classes="section" Text="Campus CO2 savings leaderboard" Margin="0" />
+                        <TextBlock Classes="muted" FontSize="11.5"
+                                   Text="Top UGM students reducing campus traffic &amp; emissions." />
+                    </StackPanel>
+
+                    <Border Grid.Row="2" BorderBrush="#DFECE5" BorderThickness="1" CornerRadius="8" ClipToBounds="True">
+                        <ListBox x:Name="lvLeaderboard" Background="White">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="m:LeaderboardItem">
+                                    <Border BorderBrush="#EEF4F1" BorderThickness="0,0,0,1" Padding="6,8">
+                                        <Grid ColumnDefinitions="34,10,*,8,Auto">
+                                            <Border Grid.Column="0" Width="32" Height="32" CornerRadius="8"
+                                                    Background="#228B5E" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding RankBadge}" Foreground="White"
+                                                           FontWeight="Bold" FontSize="12"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+
+                                            <StackPanel Grid.Column="2" Spacing="2" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="#1D352B"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding Subtitle}" Classes="muted" FontSize="11"
+                                                           TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+
+                                            <Border Grid.Column="4" Classes="pill" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Co2Text}" FontWeight="Bold"
+                                                           FontSize="11.5" Foreground="#14573B" />
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Footer Bar -->
+        <Grid Grid.Row="8" ColumnDefinitions="*,Auto">
+            <TextBlock Classes="muted" FontSize="12" VerticalAlignment="Center"
+                       Text="Climate Action Alignment: Every shared trip removes 1 single-occupancy vehicle from UGM gates." />
+            <Button x:Name="btnLogout" Grid.Column="1" Classes="secondary" Content="Logout"
+                    Width="100" Height="40" Click="btnLogout_Click" />
+        </Grid>
+    </Grid>
+</Window>
+

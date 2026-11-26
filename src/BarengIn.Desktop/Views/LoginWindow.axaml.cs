@@ -22,7 +22,12 @@ public partial class LoginWindow : Window
             return;
         }
 
-        string selectedRole = cbRole.SelectedIndex == 1 ? "Driver" : "Passenger";
+        string selectedRole = cbRole.SelectedIndex switch
+        {
+            1 => "Driver",
+            2 => "Admin",
+            _ => "Passenger",
+        };
         string faculty;
         string hobbies;
         string bio;
@@ -45,7 +50,10 @@ public partial class LoginWindow : Window
 
         if (user == null)
         {
-            await MessageBox.Show(this, "NIM or password is wrong.");
+            string denyMessage = selectedRole == "Admin" && !BarengIn.Infrastructure.Persistence.UserRepository.IsDeclaredAdminIdentifier(tbUsername.Text)
+                ? "Access denied: Only declared BarengIn Administrators (e.g. admin@ugm.ac.id) can log in as Admin."
+                : "NIM/Email or password is wrong.";
+            await MessageBox.Show(this, denyMessage);
             return;
         }
 

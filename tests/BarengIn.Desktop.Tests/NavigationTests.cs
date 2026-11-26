@@ -44,6 +44,34 @@ public class NavigationTests
     }
 
     [AvaloniaFact]
+    public void Login_AsAdmin_OpensAdminScreen()
+    {
+        var admin = LogInAs<AdminWindow>(2);
+        Assert.Contains("(Admin)", admin.Find<TextBlock>("lblWelcome").Text);
+    }
+
+    [AvaloniaFact]
+    public void Login_AsAdmin_WithDeclaredEmail_OpensAdminScreen_AndRejectsUndeclaredStudent()
+    {
+        // Declared admin email (admin@ugm.ac.id) is allowed
+        var login1 = NewLogin();
+        login1.Find<ComboBox>("cbRole").SelectedIndex = 2;
+        login1.Find<TextBox>("tbUsername").Text = "admin@ugm.ac.id";
+        login1.Find<TextBox>("tbPassword").Text = "admin123";
+        login1.Click("btnLogin");
+        var admin = Assert.IsType<AdminWindow>(Navigator.Current);
+        Assert.Contains("BarengIn Campus Admin (Admin)", admin.Find<TextBlock>("lblWelcome").Text);
+
+        // Undeclared regular student trying to log in as Admin is blocked and stays on LoginWindow
+        var login2 = NewLogin();
+        login2.Find<ComboBox>("cbRole").SelectedIndex = 2;
+        login2.Find<TextBox>("tbUsername").Text = "random.student@mail.ugm.ac.id";
+        login2.Find<TextBox>("tbPassword").Text = "secret123";
+        login2.Click("btnLogin");
+        Assert.Same(login2, Navigator.Current);
+    }
+
+    [AvaloniaFact]
     public void Login_WithEmptyFields_StaysOnLogin()
     {
         var login = NewLogin();
@@ -97,6 +125,16 @@ public class NavigationTests
     }
 
     [AvaloniaFact]
+    public void Admin_Profile_ThenBack_ReturnsToAdminScreen()
+    {
+        var admin = LogInAs<AdminWindow>(2);
+        admin.Click("btnProfile");
+        var profile = Assert.IsType<ProfileWindow>(Navigator.Current);
+        profile.Click("btnBack");
+        Assert.IsType<AdminWindow>(Navigator.Current);
+    }
+
+    [AvaloniaFact]
     public void Logout_ReturnsToLogin_FromBothHomes()
     {
         var home = LogInAs<HomeWindow>(0);
@@ -105,6 +143,10 @@ public class NavigationTests
 
         var driver = LogInAs<DriverWindow>(1);
         driver.Click("btnLogout");
+        Assert.IsType<LoginWindow>(Navigator.Current);
+
+        var admin = LogInAs<AdminWindow>(2);
+        admin.Click("btnLogout");
         Assert.IsType<LoginWindow>(Navigator.Current);
     }
 }

@@ -18,7 +18,11 @@ public static class Navigator
 
     public static void GoHome(Window from)
     {
-        if (AppSession.Role == "Driver")
+        if (AppSession.Role == "Admin")
+        {
+            Go<AdminWindow>(from);
+        }
+        else if (AppSession.Role == "Driver")
         {
             Go<DriverWindow>(from);
         }

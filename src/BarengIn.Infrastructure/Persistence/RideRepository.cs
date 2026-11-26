@@ -19,12 +19,17 @@ public sealed class RideRepository
         using var conn = db.Open();
         foreach (string f in faculties)
         {
+            var (lat, lon) = Services.RouteApiService.GetFacultyCoordinates(f);
             using var cmd = new NpgsqlCommand(@"
                 INSERT INTO faculty (name, short_name, latitude, longitude)
-                VALUES (@name, @short, -7.7654, 110.3723)
-                ON CONFLICT (name) DO NOTHING;", conn);
+                VALUES (@name, @short, @lat, @lon)
+                ON CONFLICT (name) DO UPDATE SET
+                    latitude = EXCLUDED.latitude,
+                    longitude = EXCLUDED.longitude;", conn);
             cmd.Parameters.AddWithValue("name", f);
             cmd.Parameters.AddWithValue("short", f.Length > 20 ? f[..20] : f);
+            cmd.Parameters.AddWithValue("lat", (decimal)lat);
+            cmd.Parameters.AddWithValue("lon", (decimal)lon);
             cmd.ExecuteNonQuery();
         }
     }
@@ -398,5 +403,77 @@ public sealed class RideRepository
         cmd.Parameters.AddWithValue("id", requestId);
         cmd.Parameters.AddWithValue("status", mappedStatus);
         return cmd.ExecuteNonQuery() == 1;
+    }
+
+    public (int TotalRides, int ApprovedRequests, double TotalCo2SavedKg, List<(string Name, string Nim, string Faculty, string Role, int SharedRides, double Co2SavedKg)> Leaderboard) GetAdminAnalytics()
+    {
+        using var conn = db.Open();
+
+        int totalRides = 0;
+        using (var rideCmd = new NpgsqlCommand("SELECT COUNT(*) FROM ride;", conn))
+        {
+            if (rideCmd.ExecuteScalar() is long rc)
+            {
+                totalRides = (int)rc;
+            }
+        }
+
+        int approvedRequests = 0;
+        using (var reqCmd = new NpgsqlCommand(
+            "SELECT COUNT(*) FROM ride_request WHERE status = 'accepted'::request_status_type;", conn))
+        {
+            if (reqCmd.ExecuteScalar() is long ac)
+            {
+                approvedRequests = (int)ac;
+            }
+        }
+
+        double loggedCo2 = 0.0;
+        using (var co2Cmd = new NpgsqlCommand("SELECT COALESCE(SUM(co2_saved_kg), 0) FROM co2_log;", conn))
+        {
+            object? val = co2Cmd.ExecuteScalar();
+            if (val is decimal dec)
+            {
+                loggedCo2 = (double)dec;
+            }
+            else if (val is double dbl)
+            {
+                loggedCo2 = dbl;
+            }
+        }
+
+        double totalCo2 = Math.Round(Math.Max(loggedCo2, (totalRides + approvedRequests) * 1.2), 2, MidpointRounding.AwayFromZero);
+
+        var leaderboard = new List<(string Name, string Nim, string Faculty, string Role, int SharedRides, double Co2SavedKg)>();
+        using (var lbCmd = new NpgsqlCommand(@"
+            SELECT u.full_name,
+                   COALESCE(u.ktm_number, '-'),
+                   COALESCE(f.name, 'Engineering (FT)'),
+                   u.role::text,
+                   (SELECT COUNT(*) FROM ride r WHERE r.driver_id = u.user_id)
+                   + (SELECT COUNT(*) FROM ride_request rr WHERE rr.passenger_id = u.user_id AND rr.status = 'accepted'::request_status_type) AS shared_count
+            FROM users u
+            LEFT JOIN faculty f ON f.faculty_id = u.faculty_id
+            WHERE u.role IN ('driver'::user_role_type, 'passenger'::user_role_type)
+            ORDER BY shared_count DESC, u.full_name ASC
+            LIMIT 10;", conn))
+        {
+            using var r = lbCmd.ExecuteReader();
+            while (r.Read())
+            {
+                string name = r.GetString(0);
+                string nim = r.GetString(1);
+                string faculty = r.GetString(2);
+                string rawRole = r.GetString(3);
+                string role = rawRole.Length > 0
+                    ? char.ToUpperInvariant(rawRole[0]) + rawRole[1..].ToLowerInvariant()
+                    : "Passenger";
+                int shared = Convert.ToInt32(r.GetValue(4));
+                double co2 = Math.Round(shared * 1.2, 2, MidpointRounding.AwayFromZero);
+                leaderboard.Add((name, nim, faculty, role, shared, co2));
+            }
+        }
+
+        return (totalRides, approvedRequests, totalCo2, leaderboard);
     }
 }
