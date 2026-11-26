@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using BarengIn.Domain;
+using BarengIn.Domain.Enums;
 using BarengIn.Domain.ValueObjects;
 using BarengIn.Infrastructure.Persistence;
 
@@ -19,6 +20,8 @@ public static class AppSession
 
     public static ObservableCollection<TripRow> DriverTrips { get; private set; } = new();
     public static ObservableCollection<RequestItem> DriverRequests { get; private set; } = new();
+    public static ObservableCollection<AdminUserItem> AdminUsers { get; private set; } = new();
+    public static ObservableCollection<LeaderboardItem> Leaderboard { get; private set; } = new();
     public static Trip? SeededDriverTrip { get; private set; }
 
     public static void SignIn(User user)
@@ -39,8 +42,16 @@ public static class AppSession
 
         Hobbies = (hobbies ?? string.Empty).Trim();
         Bio = bio is not null ? bio.Trim() : user.Bio;
-        VerificationStatus = user.IsVerified() ? "Verified" : "Pending";
+        VerificationStatus = user.IsSuspended
+            ? "Suspended"
+            : user.Status switch
+            {
+                BarengIn.Domain.Enums.VerificationStatus.Verified => "Verified",
+                BarengIn.Domain.Enums.VerificationStatus.Rejected => "Rejected",
+                _ => "Pending",
+            };
         InitializeDriverStateIfNeeded();
+        InitializeAdminStateIfNeeded();
     }
 
     public static void SignIn(string nim, string role)
@@ -62,6 +73,7 @@ public static class AppSession
             safeNim,
             role);
         InitializeDriverStateIfNeeded();
+        InitializeAdminStateIfNeeded();
     }
 
     private static void InitializeDriverStateIfNeeded()
@@ -91,10 +103,56 @@ public static class AppSession
             SeededDriverTrip.ReceiveRequest(req2);
             SeededDriverTrip.ReceiveRequest(req3);
 
-            DriverRequests.Add(new RequestItem("Rani Putri", req1.PickupAddress, "MIPA", req1.RequestId));
-            DriverRequests.Add(new RequestItem("Budi Santoso", req2.PickupAddress, "Engineering (FT)", req2.RequestId));
-            DriverRequests.Add(new RequestItem("Sari Dewi", req3.PickupAddress, "Medicine", req3.RequestId));
+            DriverRequests.Add(new RequestItem("Rani Putri", req1.PickupAddress, "MIPA", req1.RequestId, passengerNim: "24/531102/PA/22101", hobbies: "reading, matcha", bio: "Morning 07:30 lecture at MIPA"));
+            DriverRequests.Add(new RequestItem("Budi Santoso", req2.PickupAddress, "Engineering (FT)", req2.RequestId, passengerNim: "24/532890/TK/59011", hobbies: "robotics, badminton", bio: "Commuting from Concat"));
+            DriverRequests.Add(new RequestItem("Sari Dewi", req3.PickupAddress, "Medicine", req3.RequestId, passengerNim: "24/534012/KU/25019", hobbies: "running, classical music", bio: "Always punctual at pickup point"));
         }
+    }
+
+    public static void InitializeAdminStateIfNeeded()
+    {
+        if (AdminUsers.Count == 0)
+        {
+            SeedDefaultAdminData();
+        }
+
+        foreach (var kv in AppDb.GetOfflineRegisteredUsers())
+        {
+            string nim = kv.Key;
+            var reg = kv.Value;
+            var existing = AdminUsers.FirstOrDefault(u => u.Nim.Equals(nim, StringComparison.OrdinalIgnoreCase));
+            if (existing == null)
+            {
+                AdminUsers.Insert(0, new AdminUserItem(nim, reg.FullName, reg.Role, reg.Faculty, reg.KtmFile, reg.Status));
+            }
+            else
+            {
+                existing.Status = reg.Status;
+            }
+        }
+    }
+
+    private static void SeedDefaultAdminData()
+    {
+        AdminUsers = new ObservableCollection<AdminUserItem>
+        {
+            new AdminUserItem("24/531102/PA/22101", "Rani Putri", "Passenger", "MIPA", "ktm_rani_putri.jpg", "Pending"),
+            new AdminUserItem("24/534012/KU/25019", "Sari Dewi", "Passenger", "Medicine", "ktm_sari_dewi.png", "Pending"),
+            new AdminUserItem("24/520194/TK/58901", "Fajar Nugroho", "Driver", "Engineering (FT)", "ktm_fajar.jpg", "Pending"),
+            new AdminUserItem("24/512301/TK/58101", "Reza Pratama", "Driver", "Engineering (FT)", "ktm_reza.jpg", "Verified"),
+            new AdminUserItem("24/514890/TK/58210", "Bagas Saputra", "Driver", "Engineering (FT)", "ktm_bagas.jpg", "Verified"),
+            new AdminUserItem("24/519204/TK/58432", "Nadia Kusuma", "Driver", "Engineering (FT)", "ktm_nadia.jpg", "Verified"),
+            new AdminUserItem("24/532890/TK/59011", "Budi Santoso", "Passenger", "Economics and Business (FEB)", "ktm_budi.jpg", "Verified"),
+        };
+
+        Leaderboard = new ObservableCollection<LeaderboardItem>
+        {
+            new LeaderboardItem(1, "Reza Pratama", "24/512301/TK/58101", "Engineering (FT)", "Driver", 14, 16.8),
+            new LeaderboardItem(2, "Bagas Saputra", "24/514890/TK/58210", "Engineering (FT)", "Driver", 11, 13.2),
+            new LeaderboardItem(3, "Nadia Kusuma", "24/519204/TK/58432", "Engineering (FT)", "Driver", 9, 10.8),
+            new LeaderboardItem(4, "Rani Putri", "24/531102/PA/22101", "MIPA", "Passenger", 7, 8.4),
+            new LeaderboardItem(5, "Budi Santoso", "24/532890/TK/59011", "Economics and Business (FEB)", "Passenger", 6, 7.2),
+        };
     }
 
     public static void Reset()
@@ -110,6 +168,8 @@ public static class AppSession
         Co2Saved = 0;
         DriverTrips = new ObservableCollection<TripRow>();
         DriverRequests = new ObservableCollection<RequestItem>();
+        AdminUsers = new ObservableCollection<AdminUserItem>();
+        Leaderboard = new ObservableCollection<LeaderboardItem>();
         SeededDriverTrip = null;
     }
 }

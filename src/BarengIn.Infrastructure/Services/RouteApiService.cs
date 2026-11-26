@@ -74,6 +74,13 @@ public sealed class RouteApiService : IDisposable
         new("Kotagede", "Prenggan, Kotagede, Yogyakarta City", -7.8282, 110.3996),
         new("Terminal Giwangan", "Giwangan, Umbulharjo, Yogyakarta City", -7.8344, 110.3923),
         new("Maguwoharjo (Stadion / Lotte Mart)", "Depok, Sleman Regency, Special Region of Yogyakarta", -7.7676, 110.4331),
+        new("Balairung UGM (Gedung Pusat)", "Bulaksumur, Caturtunggal, Depok, Sleman Regency", -7.7686, 110.3785),
+        new("Grha Sabha Pramana (GSP) UGM", "Bulaksumur, Caturtunggal, Depok, Sleman Regency", -7.7704, 110.3777),
+        new("RSUP Dr. Sardjito", "Jalan Kesehatan No.1, Sendowo, Mlati, Sleman Regency", -7.7686, 110.3732),
+        new("Masjid Kampus UGM (Maskam)", "Bulaksumur, Caturtunggal, Depok, Sleman Regency", -7.7732, 110.3797),
+        new("Gelanggang Inovasi dan Kreativitas (GIK) UGM", "Jalan Persatuan, Bulaksumur, Sleman Regency", -7.7745, 110.3746),
+        new("Perpustakaan Pusat UGM", "Bulaksumur, Caturtunggal, Depok, Sleman Regency", -7.7697, 110.3782),
+        new("Wisdom Park UGM", "Karangmalang, Caturtunggal, Depok, Sleman Regency", -7.7712, 110.3822),
     ];
 
     private static readonly Dictionary<string, (double Lat, double Lon)> KnownAreaCoordinates =
@@ -122,11 +129,47 @@ public sealed class RouteApiService : IDisposable
     private static readonly Dictionary<string, (double Lat, double Lon)> FacultyCoordinates =
         new(StringComparer.OrdinalIgnoreCase)
         {
+            // Legacy / English short keys
             ["Engineering (FT)"] = (-7.7654, 110.3723),
             ["MIPA"] = (-7.7672, 110.3762),
             ["Economics and Business (FEB)"] = (-7.7706, 110.3792),
             ["Medicine"] = (-7.7689, 110.3736),
             ["Social and Political Sciences"] = (-7.7701, 110.3774),
+
+            // 18 Official UGM Faculties + Schools
+            ["Fakultas Biologi"] = (-7.7655, 110.3768),
+            ["Fakultas Ekonomika dan Bisnis (FEB)"] = (-7.7708, 110.3794),
+            ["Fakultas Farmasi"] = (-7.7679, 110.3752),
+            ["Fakultas Filsafat"] = (-7.7715, 110.3798),
+            ["Fakultas Geografi"] = (-7.7664, 110.3766),
+            ["Fakultas Hukum"] = (-7.7709, 110.3806),
+            ["Fakultas Ilmu Budaya (FIB)"] = (-7.7718, 110.3782),
+            ["Fakultas Ilmu Sosial dan Ilmu Politik (FISIPOL)"] = (-7.7702, 110.3788),
+            ["Fakultas Kedokteran, Kesehatan Masyarakat, dan Keperawatan (FK-KMK)"] = (-7.7691, 110.3738),
+            ["Fakultas Kedokteran Gigi (FKG)"] = (-7.7696, 110.3749),
+            ["Fakultas Kedokteran Hewan (FKH)"] = (-7.7681, 110.3834),
+            ["Fakultas Kehutanan"] = (-7.7674, 110.3805),
+            ["Fakultas Matematika dan Ilmu Pengetahuan Alam (FMIPA)"] = (-7.7670, 110.3764),
+            ["Fakultas Pertanian"] = (-7.7695, 110.3818),
+            ["Fakultas Peternakan"] = (-7.7672, 110.3852),
+            ["Fakultas Psikologi"] = (-7.7724, 110.3789),
+            ["Fakultas Teknik"] = (-7.7652, 110.3721),
+            ["Fakultas Teknik (FT)"] = (-7.7653, 110.3725),
+            ["Fakultas Teknologi Pertanian (FTP)"] = (-7.7688, 110.3802),
+            ["Sekolah Vokasi (SV)"] = (-7.7748, 110.3742),
+            ["Sekolah Pascasarjana"] = (-7.7644, 110.3755),
+
+            // Major UGM Campus Landmarks & Destinations
+            ["Balairung UGM (Gedung Pusat)"] = (-7.7686, 110.3785),
+            ["Grha Sabha Pramana (GSP)"] = (-7.7704, 110.3777),
+            ["RSUP Dr. Sardjito"] = (-7.7686, 110.3732),
+            ["Rumah Sakit Akademik (RSA) UGM"] = (-7.7426, 110.3508),
+            ["Perpustakaan Pusat UGM"] = (-7.7697, 110.3782),
+            ["Masjid Kampus UGM (Maskam)"] = (-7.7732, 110.3797),
+            ["Gelanggang Inovasi dan Kreativitas (GIK)"] = (-7.7745, 110.3746),
+            ["Wisdom Park UGM"] = (-7.7712, 110.3822),
+            ["Stadion Pancasila UGM"] = (-7.7705, 110.3831),
+            ["Asrama Mahasiswa (Darmaputera / Ratnaningsih)"] = (-7.7629, 110.3795),
         };
 
     private readonly HttpClient _httpClient;

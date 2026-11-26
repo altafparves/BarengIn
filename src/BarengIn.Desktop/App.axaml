@@ -6,9 +6,32 @@
     <Application.Styles>
         <FluentTheme />
 
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderBrush" Value="#DFECE5" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="16" />
+        </Style>
+
+        <Style Selector="Border.kpi">
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderBrush" Value="#D7E8DF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="14,12" />
+        </Style>
+
+        <Style Selector="Border.pill">
+            <Setter Property="Background" Value="#E6F5EE" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Padding" Value="10,3" />
+        </Style>
+
         <Style Selector="Button.primary">
             <Setter Property="Background" Value="#228B5E" />
             <Setter Property="Foreground" Value="White" />
+            <Setter Property="CornerRadius" Value="6" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
             <Setter Property="FontWeight" Value="SemiBold" />
@@ -23,13 +46,39 @@
         </Style>
 
         <Style Selector="Button.secondary">
+            <Setter Property="Background" Value="#EDF3F0" />
+            <Setter Property="Foreground" Value="#1E3A2F" />
+            <Setter Property="BorderBrush" Value="#D3E2DA" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Button.secondary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#DFECE5" />
+            <Setter Property="Foreground" Value="#14573B" />
+        </Style>
+
+        <Style Selector="Button.danger">
+            <Setter Property="Background" Value="#FDECEC" />
+            <Setter Property="Foreground" Value="#B42318" />
+            <Setter Property="BorderBrush" Value="#F8C9C6" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Button.danger:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#F9D7D5" />
+            <Setter Property="Foreground" Value="#912018" />
         </Style>
 
         <Style Selector="Button.link">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="#228B5E" />
+            <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Padding" Value="4" />
         </Style>
         <Style Selector="Button.link:pointerover /template/ ContentPresenter#PART_ContentPresenter">
@@ -38,25 +87,28 @@
         </Style>
 
         <Style Selector="TextBlock.title">
-            <Setter Property="FontSize" Value="32" />
+            <Setter Property="FontSize" Value="30" />
             <Setter Property="FontWeight" Value="Bold" />
-            <Setter Property="Foreground" Value="#228B5E" />
+            <Setter Property="Foreground" Value="#1B6F4B" />
         </Style>
         <Style Selector="TextBlock.heading">
             <Setter Property="FontSize" Value="20" />
             <Setter Property="FontWeight" Value="Bold" />
-            <Setter Property="Foreground" Value="#228B5E" />
+            <Setter Property="Foreground" Value="#1B6F4B" />
         </Style>
         <Style Selector="TextBlock.section">
             <Setter Property="FontSize" Value="14" />
-            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="#1D352B" />
             <Setter Property="Margin" Value="0,0,0,4" />
         </Style>
         <Style Selector="TextBlock.muted">
-            <Setter Property="Foreground" Value="Gray" />
+            <Setter Property="Foreground" Value="#5E7168" />
         </Style>
         <Style Selector="TextBlock.label">
             <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="#2A3F35" />
+            <Setter Property="FontWeight" Value="Medium" />
         </Style>
     </Application.Styles>
 </Application>

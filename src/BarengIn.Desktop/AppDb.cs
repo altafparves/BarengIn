@@ -11,7 +11,7 @@ public static class AppDb
     private const string DefaultConnectionString =
         "Host=localhost;Port=5432;Database=barengin;Username=postgres;Password=PASSWORDHERE";
 
-    private static readonly Dictionary<string, (string FullName, string Email, string Phone, string Password, string Faculty, string Role)> OfflineRegisteredUsers =
+    private static readonly Dictionary<string, (string FullName, string Email, string Phone, string Password, string Faculty, string Role, string Status, string KtmFile)> OfflineRegisteredUsers =
         new(StringComparer.OrdinalIgnoreCase);
 
     private static readonly HttpClient SharedHttpClient = new()
@@ -131,31 +131,105 @@ public static class AppDb
         }
 
         string trimmedNim = (nim ?? string.Empty).Trim();
-        if (OfflineRegisteredUsers.TryGetValue(trimmedNim, out var reg))
+        bool wantsAdmin = !string.IsNullOrWhiteSpace(selectedRole)
+                       && selectedRole.Equals("Admin", StringComparison.OrdinalIgnoreCase);
+
+        if (wantsAdmin && !UserRepository.IsDeclaredAdminIdentifier(trimmedNim))
         {
+            // Check if the user registered by email and that email is a declared admin
+            bool matchedDeclaredEmail = OfflineRegisteredUsers.Values.Any(u =>
+                u.Email.Equals(trimmedNim, StringComparison.OrdinalIgnoreCase)
+                && UserRepository.IsDeclaredAdminIdentifier(u.Email));
+            if (!matchedDeclaredEmail)
+            {
+                return null;
+            }
+        }
+
+        // Allow login by either NIM or Email in offline registered users
+        (string KeyNim, (string FullName, string Email, string Phone, string Password, string Faculty, string Role, string Status, string KtmFile) Reg)? matchedOffline = null;
+        if (OfflineRegisteredUsers.TryGetValue(trimmedNim, out var byNim))
+        {
+            matchedOffline = (trimmedNim, byNim);
+        }
+        else
+        {
+            foreach (var kv in OfflineRegisteredUsers)
+            {
+                if (kv.Value.Email.Equals(trimmedNim, StringComparison.OrdinalIgnoreCase))
+                {
+                    matchedOffline = (kv.Key, kv.Value);
+                    break;
+                }
+            }
+        }
+
+        if (matchedOffline.HasValue)
+        {
+            var reg = matchedOffline.Value.Reg;
+            string effectiveNim = matchedOffline.Value.KeyNim;
             if (reg.Password != password)
+            {
+                return null;
+            }
+
+            if (wantsAdmin
+                && !reg.Role.Equals("Admin", StringComparison.OrdinalIgnoreCase)
+                && !UserRepository.IsDeclaredAdminIdentifier(effectiveNim)
+                && !UserRepository.IsDeclaredAdminIdentifier(reg.Email))
             {
                 return null;
             }
 
             facultyName = reg.Faculty;
             string roleToUse = !string.IsNullOrWhiteSpace(selectedRole) ? selectedRole : reg.Role;
-            return UserRepository.BuildUserForRole(
-                trimmedNim,
+            bool isVerified = reg.Status.Equals("Verified", StringComparison.OrdinalIgnoreCase);
+            var user = UserRepository.BuildUserForRole(
+                effectiveNim,
                 reg.FullName,
                 reg.Email,
                 "offline-hash",
                 reg.Phone,
-                roleToUse);
+                roleToUse,
+                verified: isVerified);
+            if (reg.Status.Equals("Pending", StringComparison.OrdinalIgnoreCase))
+            {
+                user.SetVerificationStatus(BarengIn.Domain.Enums.VerificationStatus.Pending);
+            }
+            else if (reg.Status.Equals("Rejected", StringComparison.OrdinalIgnoreCase))
+            {
+                user.SetVerificationStatus(BarengIn.Domain.Enums.VerificationStatus.Rejected);
+            }
+            else if (reg.Status.Equals("Suspended", StringComparison.OrdinalIgnoreCase))
+            {
+                user.Suspend("Suspended by Admin");
+            }
+
+            return user;
+        }
+
+        var declaredAdmin = UserRepository.TryGetDeclaredAdmin(trimmedNim);
+        if (declaredAdmin.HasValue)
+        {
+            facultyName = "Engineering (FT)";
+            return UserRepository.BuildUserForRole(
+                declaredAdmin.Value.Nim,
+                declaredAdmin.Value.FullName,
+                declaredAdmin.Value.Email,
+                "offline-hash",
+                declaredAdmin.Value.Phone,
+                string.IsNullOrWhiteSpace(selectedRole) ? "Admin" : selectedRole,
+                verified: true);
         }
 
         string displayName = string.IsNullOrWhiteSpace(Models.AppSession.Name)
             ? trimmedNim
             : Models.AppSession.Name;
+        string fallbackEmail = trimmedNim.Contains('@') ? trimmedNim : trimmedNim + "@mail.ugm.ac.id";
         return UserRepository.BuildUserForRole(
             trimmedNim,
             displayName,
-            trimmedNim + "@mail.ugm.ac.id",
+            fallbackEmail,
             "offline-hash",
             "08123456789",
             selectedRole);
@@ -168,16 +242,25 @@ public static class AppDb
         string password,
         string ktmNumber,
         string facultyName,
-        string role)
+        string role,
+        string ktmFile = "ktm_card.jpg")
     {
         string trimmedKtm = (ktmNumber ?? string.Empty).Trim();
+        string normalizedRole = role.Trim();
+        if (normalizedRole.Length > 0)
+        {
+            normalizedRole = char.ToUpperInvariant(normalizedRole[0]) + normalizedRole[1..].ToLowerInvariant();
+        }
+
         OfflineRegisteredUsers[trimmedKtm] = (
             fullName.Trim(),
             email.Trim(),
             phone.Trim(),
             password,
             facultyName.Trim(),
-            role.Trim());
+            normalizedRole,
+            "Pending",
+            string.IsNullOrWhiteSpace(ktmFile) ? "ktm_card.jpg" : ktmFile.Trim());
 
         if (IsAvailable)
         {
@@ -186,6 +269,25 @@ public static class AppDb
 
         return true;
     }
+
+    public static IReadOnlyDictionary<string, (string FullName, string Email, string Phone, string Password, string Faculty, string Role, string Status, string KtmFile)> GetOfflineRegisteredUsers() =>
+        OfflineRegisteredUsers;
+
+    public static void UpdateOfflineUserStatus(string nim, string status)
+    {
+        if (string.IsNullOrWhiteSpace(nim))
+        {
+            return;
+        }
+
+        string trimmed = nim.Trim();
+        if (OfflineRegisteredUsers.TryGetValue(trimmed, out var reg))
+        {
+            OfflineRegisteredUsers[trimmed] = (reg.FullName, reg.Email, reg.Phone, reg.Password, reg.Faculty, reg.Role, status, reg.KtmFile);
+        }
+    }
+
+    public static void ClearOfflineUsers() => OfflineRegisteredUsers.Clear();
 
     public static string? TryLoadConnectionStringFromAppSettings(string? explicitPath = null)
     {

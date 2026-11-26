@@ -26,10 +26,28 @@ public partial class ProfileWindow : Window
         tbHobbies.Text = AppSession.Hobbies;
         tbBio.Text = AppSession.Bio;
 
-        bool verified = AppSession.VerificationStatus == "Verified";
-        lblStatus.Text = verified ? "KTM verified" : "KTM pending";
-        lblStatus.Foreground = new SolidColorBrush(Color.Parse(verified ? "#14573B" : "#7A4B00"));
-        badgeStatus.Background = new SolidColorBrush(Color.Parse(verified ? "#DDF3E8" : "#FFEBC2"));
+        string status = AppSession.VerificationStatus;
+        if (status.Equals("Verified", StringComparison.OrdinalIgnoreCase))
+        {
+            lblStatus.Text = "KTM verified";
+            lblStatus.Foreground = new SolidColorBrush(Color.Parse("#14573B"));
+            badgeStatus.Background = new SolidColorBrush(Color.Parse("#DDF3E8"));
+        }
+        else if (status.Equals("Suspended", StringComparison.OrdinalIgnoreCase)
+              || status.Equals("Rejected", StringComparison.OrdinalIgnoreCase))
+        {
+            lblStatus.Text = status.Equals("Suspended", StringComparison.OrdinalIgnoreCase)
+                ? "Account suspended"
+                : "KTM rejected";
+            lblStatus.Foreground = new SolidColorBrush(Color.Parse("#B42318"));
+            badgeStatus.Background = new SolidColorBrush(Color.Parse("#FDECEC"));
+        }
+        else
+        {
+            lblStatus.Text = "KTM pending";
+            lblStatus.Foreground = new SolidColorBrush(Color.Parse("#7A4B00"));
+            badgeStatus.Background = new SolidColorBrush(Color.Parse("#FFEBC2"));
+        }
     }
 
     private async void btnSave_Click(object? sender, RoutedEventArgs e)

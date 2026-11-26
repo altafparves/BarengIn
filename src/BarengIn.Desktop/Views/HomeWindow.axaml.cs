@@ -141,6 +141,7 @@ public partial class HomeWindow : Window
 
     private async void btnFind_Click(object? sender, RoutedEventArgs e)
     {
+        CancelAndClear(ref suggestCts);
         bdrSuggestions.IsVisible = false;
         string origin = (tbOrigin.Text ?? "").Trim();
         if (origin == "")

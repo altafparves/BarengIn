@@ -475,6 +475,7 @@ public class ScreenBehaviorTests
         var profile = new ProfileWindow();
         var home = new HomeWindow();
         var driver = new DriverWindow();
+        var admin = new AdminWindow();
 
         Assert.True(login.CanResize);
         Assert.Equal(340, login.MinWidth);
@@ -495,5 +496,78 @@ public class ScreenBehaviorTests
         Assert.True(driver.CanResize);
         Assert.Equal(840, driver.MinWidth);
         Assert.Equal(560, driver.MinHeight);
+
+        Assert.True(admin.CanResize);
+        Assert.Equal(900, admin.MinWidth);
+        Assert.Equal(580, admin.MinHeight);
+    }
+
+    [AvaloniaFact]
+    public void AdminWindow_VerifyRejectSuspend_And_GenerateReport_WorkAndSyncWithOfflineRegistration()
+    {
+        Environment.SetEnvironmentVariable("BARENGIN_DB", "Host=localhost;Port=5432;Database=barengin;Username=postgres;Password=PASSWORDHERE");
+        BarengIn.Desktop.AppDb.ResetAvailabilityCache();
+        BarengIn.Desktop.AppDb.ClearOfflineUsers();
+        AppSession.Reset();
+
+        // Register a new user in offline mode -> status starts as Pending
+        Assert.True(BarengIn.Desktop.AppDb.RegisterOrFallback(
+            "Nadia Kusuma",
+            "nadia@mail.ugm.ac.id",
+            "081299998888",
+            "secret123",
+            "24/599999/TK/59999",
+            "Engineering (FT)",
+            "Passenger",
+            "ktm_nadia.png"));
+
+        // Log in as Nadia -> Profile shows KTM pending, but she can still use the app
+        var nadiaUser = BarengIn.Desktop.AppDb.AuthenticateOrFallback("24/599999/TK/59999", "secret123", "Passenger");
+        Assert.NotNull(nadiaUser);
+        AppSession.SignIn(nadiaUser!, "Engineering (FT)", "", "");
+        Assert.Equal("Pending", AppSession.VerificationStatus);
+        var pendingProfile = new ProfileWindow();
+        pendingProfile.Show();
+        Assert.Equal("KTM pending", pendingProfile.Find<TextBlock>("lblStatus").Text);
+
+        // Log in as Admin -> Nadia appears in the KTM queue as Pending
+        AppSession.Reset();
+        AppSession.SignIn("ADMIN/01", "Admin");
+        var adminWindow = new AdminWindow();
+        adminWindow.Show();
+        adminWindow.Layout();
+
+        var users = adminWindow.Find<ListBox>("lvUsers").ItemsSource!.Cast<AdminUserItem>().ToList();
+        var nadiaItem = Assert.Single(users, u => u.Nim == "24/599999/TK/59999");
+        Assert.Equal("Pending", nadiaItem.Status);
+
+        int initialPendingCount = users.Count(u => u.IsPending);
+        Assert.Equal($"{initialPendingCount} pending", adminWindow.Find<TextBlock>("lblPendingKtms").Text);
+
+        // Verify first pending user (Nadia)
+        adminWindow.FindButton("Verify KTM").Press();
+        adminWindow.Layout();
+        Assert.Equal("Verified", nadiaItem.Status);
+        Assert.Equal($"{initialPendingCount - 1} pending", adminWindow.Find<TextBlock>("lblPendingKtms").Text);
+
+        // Re-authenticate Nadia -> now Verified!
+        var verifiedNadia = BarengIn.Desktop.AppDb.AuthenticateOrFallback("24/599999/TK/59999", "secret123", "Passenger");
+        Assert.NotNull(verifiedNadia);
+        Assert.True(verifiedNadia!.IsVerified());
+
+        // Reject next pending user
+        adminWindow.FindButton("Reject").Press();
+        adminWindow.Layout();
+        Assert.Equal($"{initialPendingCount - 2} pending", adminWindow.Find<TextBlock>("lblPendingKtms").Text);
+
+        // Suspend a user
+        adminWindow.FindButton("Suspend").Press();
+        adminWindow.Layout();
+        Assert.Contains(users, u => u.Status == "Suspended");
+
+        // Leaderboard and Report summary are populated
+        var leaderboard = adminWindow.Find<ListBox>("lvLeaderboard").ItemsSource!.Cast<LeaderboardItem>().ToList();
+        Assert.NotEmpty(leaderboard);
+        Assert.Contains("Sustainability Report", adminWindow.Find<TextBlock>("lblReportSummary").Text);
     }
 }

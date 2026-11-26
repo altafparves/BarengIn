@@ -70,6 +70,15 @@ public abstract class User
     /// <summary>Short bio, exposed read-only from the protected bio field.</summary>
     public string Bio => bio;
 
+    /// <summary>Current KTM verification status, exposed read-only from the protected verificationStatus field.</summary>
+    public VerificationStatus Status => verificationStatus;
+
+    /// <summary>Whether the user account has been suspended by an administrator.</summary>
+    public bool IsSuspended { get; private set; }
+
+    /// <summary>Reason recorded when an administrator suspends the account.</summary>
+    public string SuspensionReason { get; private set; } = string.Empty;
+
     /// <summary>Class schedules this user owns, exposed read-only.</summary>
     public IReadOnlyList<ClassSchedule> ClassSchedules => classSchedules;
 
@@ -108,10 +117,29 @@ public abstract class User
         return true;
     }
 
-    public bool IsVerified() => verificationStatus == VerificationStatus.Verified;
+    public bool IsVerified() => verificationStatus == VerificationStatus.Verified && !IsSuspended;
 
     /// <summary>Marks this user's KTM as verified (encapsulated state change on protected field).</summary>
     public void MarkVerified() => verificationStatus = VerificationStatus.Verified;
+
+    /// <summary>Updates the user's KTM verification status.</summary>
+    public void SetVerificationStatus(VerificationStatus status) => verificationStatus = status;
+
+    /// <summary>Suspends the user account with an administrative reason.</summary>
+    public void Suspend(string reason)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+        IsSuspended = true;
+        SuspensionReason = reason.Trim();
+        verificationStatus = VerificationStatus.Rejected;
+    }
+
+    /// <summary>Lifts an administrative suspension from the user account.</summary>
+    public void Unsuspend()
+    {
+        IsSuspended = false;
+        SuspensionReason = string.Empty;
+    }
 
     public abstract bool CanPublishTrip();
 
