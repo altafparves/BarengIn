@@ -30,13 +30,33 @@ public static class AppDb
             string? env = Environment.GetEnvironmentVariable("BARENGIN_DB");
             if (!string.IsNullOrWhiteSpace(env))
             {
-                return env;
+                return Database.NormalizeConnectionString(env);
+            }
+
+            if (!string.IsNullOrWhiteSpace(ConfigFilePath))
+            {
+                string? explicitConfig = TryLoadConnectionStringFromAppSettings(ConfigFilePath);
+                return !string.IsNullOrWhiteSpace(explicitConfig)
+                    ? Database.NormalizeConnectionString(explicitConfig)
+                    : DefaultConnectionString;
+            }
+
+            string? dbUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+            if (!string.IsNullOrWhiteSpace(dbUrl))
+            {
+                return Database.NormalizeConnectionString(dbUrl);
+            }
+
+            string? fromDotEnv = TryLoadConnectionStringFromDotEnv();
+            if (!string.IsNullOrWhiteSpace(fromDotEnv))
+            {
+                return Database.NormalizeConnectionString(fromDotEnv);
             }
 
             string? fromConfig = TryLoadConnectionStringFromAppSettings();
             if (!string.IsNullOrWhiteSpace(fromConfig))
             {
-                return fromConfig;
+                return Database.NormalizeConnectionString(fromConfig);
             }
 
             return DefaultConnectionString;
@@ -64,10 +84,11 @@ public static class AppDb
 
             try
             {
-                var builder = new NpgsqlConnectionStringBuilder(ConnectionString)
-                {
-                    Timeout = 1,
-                };
+                var builder = new NpgsqlConnectionStringBuilder(ConnectionString);
+                bool isLocal = string.IsNullOrWhiteSpace(builder.Host)
+                            || builder.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+                            || builder.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase);
+                builder.Timeout = isLocal ? 1 : 15;
                 using var conn = new NpgsqlConnection(builder.ConnectionString);
                 conn.Open();
                 cachedAvailable = true;
@@ -323,6 +344,58 @@ public static class AppDb
         catch
         {
             // Ignore malformed or unreadable appsettings.json and fall back cleanly.
+        }
+
+        return null;
+    }
+
+    public static string? TryLoadConnectionStringFromDotEnv()
+    {
+        if (!string.IsNullOrWhiteSpace(ConfigFilePath))
+        {
+            return null;
+        }
+
+        try
+        {
+            string? dir = Directory.GetCurrentDirectory();
+            for (int depth = 0; depth < 6 && !string.IsNullOrWhiteSpace(dir); depth++)
+            {
+                foreach (string fileName in new[] { ".env.local", ".env" })
+                {
+                    string candidate = Path.Combine(dir, fileName);
+                    if (!File.Exists(candidate))
+                    {
+                        continue;
+                    }
+
+                    foreach (string rawLine in File.ReadAllLines(candidate))
+                    {
+                        string line = rawLine.Trim();
+                        if (line.Length == 0 || line.StartsWith('#'))
+                        {
+                            continue;
+                        }
+
+                        if (line.StartsWith("BARENGIN_DB=", StringComparison.Ordinal)
+                            || line.StartsWith("DATABASE_URL=", StringComparison.Ordinal))
+                        {
+                            int eq = line.IndexOf('=');
+                            string val = line[(eq + 1)..].Trim().Trim('"').Trim('\'');
+                            if (!string.IsNullOrWhiteSpace(val))
+                            {
+                                return val;
+                            }
+                        }
+                    }
+                }
+
+                dir = Directory.GetParent(dir)?.FullName;
+            }
+        }
+        catch
+        {
+            // Ignore unreadable .env files cleanly.
         }
 
         return null;

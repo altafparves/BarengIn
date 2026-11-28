@@ -463,3 +463,4 @@ seed/*.local.json
 # Windows release bundles
 dist/
 BarengIn-MVP-win-x64.zip
+.neon

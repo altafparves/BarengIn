@@ -1,0 +1,13 @@
+{
+  "name": "barengin",
+  "private": true,
+  "scripts": {
+    "build": "dotnet build BarengIn.sln",
+    "start": "dotnet run --project src/BarengIn.Desktop",
+    "test": "dotnet test BarengIn.sln"
+  },
+  "dependencies": {
+    "@neon/config": "^1.14.8",
+    "@neon/env": "^2.1.11"
+  }
+}

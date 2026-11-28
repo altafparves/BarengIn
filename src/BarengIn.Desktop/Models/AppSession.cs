@@ -96,15 +96,15 @@ public static class AppSession
                 polylineJson: string.Empty);
             driver.RecordPublishedTrip(SeededDriverTrip);
 
-            var req1 = new RideRequest(SeededDriverTrip.TripId, Guid.NewGuid(), "Jakal Km 5", new GeoPoint(-7.75, 110.38), "Morning class");
-            var req2 = new RideRequest(SeededDriverTrip.TripId, Guid.NewGuid(), "Condongcatur", new GeoPoint(-7.76, 110.40), "Morning class");
+            var req1 = new RideRequest(SeededDriverTrip.TripId, Guid.NewGuid(), "Pogung Dalangan", new GeoPoint(-7.76, 110.37), "Morning class");
+            var req2 = new RideRequest(SeededDriverTrip.TripId, Guid.NewGuid(), "Sendowo", new GeoPoint(-7.77, 110.37), "Morning class");
             var req3 = new RideRequest(SeededDriverTrip.TripId, Guid.NewGuid(), "Seturan", new GeoPoint(-7.77, 110.41), "Morning class");
             SeededDriverTrip.ReceiveRequest(req1);
             SeededDriverTrip.ReceiveRequest(req2);
             SeededDriverTrip.ReceiveRequest(req3);
 
-            DriverRequests.Add(new RequestItem("Rani Putri", req1.PickupAddress, "MIPA", req1.RequestId, passengerNim: "24/531102/PA/22101", hobbies: "reading, matcha", bio: "Morning 07:30 lecture at MIPA"));
-            DriverRequests.Add(new RequestItem("Budi Santoso", req2.PickupAddress, "Engineering (FT)", req2.RequestId, passengerNim: "24/532890/TK/59011", hobbies: "robotics, badminton", bio: "Commuting from Concat"));
+            DriverRequests.Add(new RequestItem("Vino", req1.PickupAddress, "Engineering (FT)", req1.RequestId, passengerNim: "24/520001/TK/59001", hobbies: "UI/UX, coffee, reading", bio: "Engineering student commuting from Pogung Dalangan"));
+            DriverRequests.Add(new RequestItem("Farhan", req2.PickupAddress, "Engineering (FT)", req2.RequestId, passengerNim: "24/520002/TK/59002", hobbies: "robotics, cycling", bio: "Morning lecture at Engineering (FT)"));
             DriverRequests.Add(new RequestItem("Sari Dewi", req3.PickupAddress, "Medicine", req3.RequestId, passengerNim: "24/534012/KU/25019", hobbies: "running, classical music", bio: "Always punctual at pickup point"));
         }
     }
@@ -136,22 +136,22 @@ public static class AppSession
     {
         AdminUsers = new ObservableCollection<AdminUserItem>
         {
-            new AdminUserItem("24/531102/PA/22101", "Rani Putri", "Passenger", "MIPA", "ktm_rani_putri.jpg", "Pending"),
+            new AdminUserItem("24/520002/TK/59002", "Farhan", "Passenger", "Engineering (FT)", "ktm_farhan_pending.png", "Pending"),
             new AdminUserItem("24/534012/KU/25019", "Sari Dewi", "Passenger", "Medicine", "ktm_sari_dewi.png", "Pending"),
             new AdminUserItem("24/520194/TK/58901", "Fajar Nugroho", "Driver", "Engineering (FT)", "ktm_fajar.jpg", "Pending"),
-            new AdminUserItem("24/512301/TK/58101", "Reza Pratama", "Driver", "Engineering (FT)", "ktm_reza.jpg", "Verified"),
-            new AdminUserItem("24/514890/TK/58210", "Bagas Saputra", "Driver", "Engineering (FT)", "ktm_bagas.jpg", "Verified"),
-            new AdminUserItem("24/519204/TK/58432", "Nadia Kusuma", "Driver", "Engineering (FT)", "ktm_nadia.jpg", "Verified"),
-            new AdminUserItem("24/532890/TK/59011", "Budi Santoso", "Passenger", "Economics and Business (FEB)", "ktm_budi.jpg", "Verified"),
+            new AdminUserItem("24/510001/TK/58001", "Satrio", "Driver", "Engineering (FT)", "ktm_satrio_ft.jpg", "Verified"),
+            new AdminUserItem("24/510002/EK/58002", "Nalen", "Driver", "Economics and Business (FEB)", "ktm_nalen_feb.jpg", "Verified"),
+            new AdminUserItem("24/520001/TK/59001", "Vino", "Passenger", "Engineering (FT)", "ktm_vino_ft.png", "Verified"),
+            new AdminUserItem("24/510003/KU/58003", "Raka Wijaya", "Driver", "Medicine", "ktm_raka.jpg", "Verified"),
         };
 
         Leaderboard = new ObservableCollection<LeaderboardItem>
         {
-            new LeaderboardItem(1, "Reza Pratama", "24/512301/TK/58101", "Engineering (FT)", "Driver", 14, 16.8),
-            new LeaderboardItem(2, "Bagas Saputra", "24/514890/TK/58210", "Engineering (FT)", "Driver", 11, 13.2),
-            new LeaderboardItem(3, "Nadia Kusuma", "24/519204/TK/58432", "Engineering (FT)", "Driver", 9, 10.8),
-            new LeaderboardItem(4, "Rani Putri", "24/531102/PA/22101", "MIPA", "Passenger", 7, 8.4),
-            new LeaderboardItem(5, "Budi Santoso", "24/532890/TK/59011", "Economics and Business (FEB)", "Passenger", 6, 7.2),
+            new LeaderboardItem(1, "Satrio", "24/510001/TK/58001", "Engineering (FT)", "Driver", 14, 16.8),
+            new LeaderboardItem(2, "Nalen", "24/510002/EK/58002", "Economics and Business (FEB)", "Driver", 11, 13.2),
+            new LeaderboardItem(3, "Vino", "24/520001/TK/59001", "Engineering (FT)", "Passenger", 9, 10.8),
+            new LeaderboardItem(4, "Raka Wijaya", "24/510003/KU/58003", "Medicine", "Driver", 7, 8.4),
+            new LeaderboardItem(5, "Farhan", "24/520002/TK/59002", "Engineering (FT)", "Passenger", 6, 7.2),
         };
     }
 

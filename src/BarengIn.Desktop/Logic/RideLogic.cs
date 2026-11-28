@@ -8,9 +8,9 @@ public static class RideLogic
 
     private static readonly (string Driver, string Pickup, int MinutesBefore, int Seats, string Cost, string Nim, string Hobbies, string Bio)[] Sample =
     {
-        ("Reza Pratama", "Jakal Km 5", 30, 3, "Rp 5.000", "24/512301/TK/58101", "badminton, indie music, coffee", "Morning commute via Jakal, chill playlist!"),
-        ("Bagas Saputra", "Seturan", 45, 2, "Rp 7.000", "24/514890/TK/58210", "photography, futsal, gaming", "Leaving on time from Seturan, helmets sanitized."),
-        ("Nadia Kusuma", "Condongcatur", 60, 1, "Rp 6.000", "24/519204/TK/58432", "podcasts, UI design, cycling", "Quiet morning ride from Concat straight to FT."),
+        ("Satrio", "Jakal Km 5.5", 30, 3, "Rp 5.000", "24/510001/TK/58001", "badminton, indie music, coffee", "Driving red Mazda 6 from Jakal Km 5.5 to FT."),
+        ("Nalen", "Seturan", 45, 4, "Rp 6.000", "24/510002/EK/58002", "podcasts, running, culinary", "Commuting in Toyota Fortuner from Seturan to FEB."),
+        ("Raka Wijaya", "Pogung Dalangan", 60, 1, "Rp 4.000", "24/510003/KU/58003", "basketball, photography", "Quiet morning ride from Pogung to campus."),
     };
 
     public static string Departure(TimeSpan classStart, int minutesBefore)

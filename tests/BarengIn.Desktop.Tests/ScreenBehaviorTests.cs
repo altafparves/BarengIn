@@ -208,8 +208,9 @@ public class ScreenBehaviorTests
     [AvaloniaFact]
     public void DriverWindow_And_ProfileWindow_WithLivePostgres_LoadApproveReject_AndPersistProfile()
     {
-        string cs = Environment.GetEnvironmentVariable("BARENGIN_TEST_DB")
-            ?? $"Host=localhost;Port=5432;Database=barengin;Username={Environment.UserName};Timeout=1";
+        string cs = BarengIn.Infrastructure.Persistence.Database.NormalizeConnectionString(
+            Environment.GetEnvironmentVariable("BARENGIN_TEST_DB")
+            ?? $"Host=localhost;Port=5432;Database=barengin;Username={Environment.UserName};Timeout=1");
 
         try
         {

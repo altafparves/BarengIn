@@ -248,8 +248,9 @@ public class LogicTests
     [Fact]
     public void RideRepository_GetDriverRides_GetIncomingRequests_AndApproveRequest_AtomicallyDecrementsSeats_AndPreventsOverbooking()
     {
-        string cs = Environment.GetEnvironmentVariable("BARENGIN_TEST_DB")
-            ?? $"Host=localhost;Port=5432;Database=barengin;Username={Environment.UserName};Timeout=1";
+        string cs = BarengIn.Infrastructure.Persistence.Database.NormalizeConnectionString(
+            Environment.GetEnvironmentVariable("BARENGIN_TEST_DB")
+            ?? $"Host=localhost;Port=5432;Database=barengin;Username={Environment.UserName};Timeout=1");
 
         try
         {
@@ -389,8 +390,9 @@ public class LogicTests
     [Fact]
     public void UserRepository_UpdateProfile_PersistsFacultyHobbiesBio_AndAuthenticateRestoresThem()
     {
-        string cs = Environment.GetEnvironmentVariable("BARENGIN_TEST_DB")
-            ?? $"Host=localhost;Port=5432;Database=barengin;Username={Environment.UserName};Timeout=1";
+        string cs = BarengIn.Infrastructure.Persistence.Database.NormalizeConnectionString(
+            Environment.GetEnvironmentVariable("BARENGIN_TEST_DB")
+            ?? $"Host=localhost;Port=5432;Database=barengin;Username={Environment.UserName};Timeout=1");
 
         try
         {
