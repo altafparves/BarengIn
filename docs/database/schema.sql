@@ -327,12 +327,14 @@ VALUES (
     'BarengIn Campus Admin',
     'admin@ugm.ac.id',
     '081100000001',
-    '$2a$11$0fG3q1Z6p3B0v1xY9yE8O.h8Z5X7W9V1U3T5S7R9Q1P3O5N7M9L1K',
+    '$2a$11$RXt1u9e5.e.UVKO6TLcd.urDPySN5QV/XeYyIqi6b1k.JWFLuq8s.',
     'ADMIN/01',
     'admin',
     'verified'
 )
-ON CONFLICT (ktm_number) DO NOTHING;
+ON CONFLICT (ktm_number) DO UPDATE SET
+    password_hash = EXCLUDED.password_hash,
+    verification_status = 'verified';
 
 INSERT INTO admin (user_id, department, admin_level)
 SELECT user_id, 'DTETI', 'super_admin'

@@ -66,7 +66,7 @@ public sealed class RideRepository
         int vehicleId;
         using (var vehCmd = new NpgsqlCommand(@"
             INSERT INTO vehicle (driver_id, plate_number, model, color, seat_capacity)
-            VALUES (@uid, @plate, 'Honda Jazz', 'White', 4)
+            VALUES (@uid, @plate, 'Mazda 6', 'Red', 4)
             ON CONFLICT (plate_number) DO UPDATE SET model = EXCLUDED.model
             RETURNING vehicle_id;", conn, tx))
         {
